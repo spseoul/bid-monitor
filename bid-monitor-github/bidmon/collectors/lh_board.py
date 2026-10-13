@@ -59,12 +59,19 @@ class LHBoardCollector(BaseCollector):
         raise RuntimeError(f"LH 게시판 3회 실패: {last}")
 
     def _parse_list(self, page: str, b: dict):
+        """LH 홈페이지 게시판 행: 번호 | 본ㆍ지사 | 분류 | 제목(goView3) | 등록일 | 조회수 | 첨부"""
         for tr in _TR.findall(page):
-            m = _LINK.search(tr)
+            m = re.search(r"goView3\('(\d+)'\s*,\s*'([^']*)'\)[^>]*>(.*?)</a>", tr, re.S)
             if not m:
-                continue
-            href, no, title = m.group(1), m.group(2), _text(m.group(3))
-            title = re.sub(r"\s*(new|NEW|N|새글|신규)\s*$", "", title).strip()
+                m = re.search(r"<td[^>]*aria-label=\"제목\"[^>]*>.*?<a[^>]+href=\"([^\"]*list_no=(\d+)[^\"]*)\"[^>]*>(.*?)</a>", tr, re.S)
+                if not m:
+                    continue
+                href, no, raw = m.group(1), m.group(2), m.group(3)
+            else:
+                no, href, raw = m.group(1), m.group(2), m.group(3)
+            title = _text(raw)
+            title = re.sub(r"^(새글|NEW|new|신규)\s*", "", title)
+            title = re.sub(r"\s*(새글|NEW|new|N|신규)$", "", title).strip()
             if not title:
                 continue
             url = _html.unescape(href)
@@ -72,12 +79,15 @@ class LHBoardCollector(BaseCollector):
                 url = BASE + url
             elif not url.startswith("http"):
                 url = f"{BOARD}?mid={b['mid']}&bid={b['bid']}&act=view&list_no={no}"
-            # 날짜: 제목 링크 바깥의 셀에서 찾음
-            tds = [_text(x) for x in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
-            others = [c for c in tds if c != title]
-            date = next((_date(c) for c in others if _DATE.fullmatch(c.strip())), "") \
-                or _date(" ".join(others))
-            yield {"no": no, "title": title, "url": url, "date": date, "status": " ".join(tds)}
+            def cell(label):
+                c = re.search(r"<td[^>]*aria-label=\"" + label + r"\"[^>]*>(.*?)</td>", tr, re.S)
+                return _text(c.group(1)) if c else ""
+            date = _date(cell("등록일")) or _date(cell("작성일"))
+            if not date:
+                tds = [_text(x) for x in re.findall(r"<td[^>]*>(.*?)</td>", tr, re.S)]
+                date = next((_date(c) for c in tds if _DATE.fullmatch(c.strip())), "")
+            yield {"no": no, "title": title, "url": url, "date": date,
+                   "kind": cell("분류"), "dept": cell("본ㆍ지사") or cell("본·지사")}
 
     def _detail(self, url: str) -> dict:
         out = {}
@@ -121,10 +131,10 @@ class LHBoardCollector(BaseCollector):
                         time.sleep(0.3)
                     n = Notice(
                         source="lh_board", notice_no=row["no"], ord="00", title=row["title"],
-                        institution="한국토지주택공사", demand_institution="LH 홈페이지 " + b.get("name", ""),
+                        institution="한국토지주택공사", demand_institution=(row.get("dept") or "") + " (홈페이지 " + b.get("name", "") + ")",
                         notice_date=(nd + " 00:00") if (nd := det.get("notice_date") or row["date"]) else "",
                         close_date=det.get("close_date", ""),
-                        notice_kind="공모·공고", url=row["url"],
+                        notice_kind=row.get("kind") or "공모·공고", url=row["url"],
                     )
                     out[n.key] = n
                 log.info("lh_board %s p%d: %d건", b.get("name", b["bid"]), p, len(rows))
