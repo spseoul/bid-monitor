@@ -96,6 +96,14 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 .amt b{color:var(--ink2);font-weight:500}
 .date{color:var(--ink3);font-size:12px;width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
 .empty{padding:56px 20px;text-align:center;color:var(--ink3)}
+.pager{display:flex;align-items:center;justify-content:center;gap:4px;padding:16px 14px 28px;border-top:1px solid var(--line2);font-size:12.5px;color:var(--ink3);flex-wrap:wrap}
+.pager button{min-width:30px;height:30px;padding:0 8px;border-radius:6px;border:1px solid transparent;color:var(--ink2)}
+.pager button:hover{background:var(--grp)}
+.pager button.on{background:var(--acc);color:#fff;font-weight:600}
+.pager button:disabled{opacity:.35;cursor:default;background:none}
+.pager .gap{padding:0 4px}
+.pager .info{margin-left:10px}
+.pager select{font:inherit;font-size:12.5px;color:var(--ink2);background:var(--grp);border:1px solid var(--line2);border-radius:6px;padding:4px 6px;margin-left:6px}
 @media (max-width:1180px){.inst{display:none}}
 @media (max-width:1000px){.lbl.kw{display:none}}
 
@@ -257,7 +265,8 @@ const VIEWS={new:"오늘 신규",urgent:"마감 임박",matched:"관심 공고",
 const $=id=>document.getElementById(id);
 const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
-const S=Object.assign({view:"matched",tag:"",q:"",cat:"",kind:"",open:"1",src:"default"},load(LS_S,{}));
+const S=Object.assign({view:"matched",tag:"",q:"",cat:"",kind:"",open:"1",src:"default",per:50},load(LS_S,{}));
+let PAGE=1;
 let MYKW=load(LS_KW,null);
 const EMPTY_KW={include:[],exclude:[]};
 const curKW=()=>S.src==="mine"?(MYKW||EMPTY_KW):DEFAULT_KW;
@@ -349,8 +358,30 @@ function render(){
   }
   const bySoon=(a,b)=>(a.dd??9e9)-(b.dd??9e9)||(b.notice_date||"").localeCompare(a.notice_date||"");
   const byNew=(a,b)=>(b.notice_date||"").localeCompare(a.notice_date||"");
-  const sec=(ico,label,arr,sorter)=>arr.length?`<div class="grp">${ICO[ico]}${label}<span class="n">${arr.length.toLocaleString()}</span></div>`+arr.sort(sorter).map(rowHTML).join(""):"";
-  el.innerHTML=sec("u","이번 주 마감",g[0],bySoon)+sec("m","다음 주",g[1],bySoon)+sec("l","이후",g[2],bySoon)+sec("x","마감일 없음",g[3],byNew);
+  const GR=[["u","이번 주 마감",bySoon],["m","다음 주",bySoon],["l","이후",bySoon],["x","마감일 없음",byNew]];
+  const ordered=[];
+  GR.forEach(([ico,label,sorter],gi)=>{g[gi].sort(sorter).forEach(n=>ordered.push([gi,n]));});
+  // 페이지 나누기
+  const per=Math.max(10,+S.per||50), pages=Math.max(1,Math.ceil(ordered.length/per));
+  if(PAGE>pages)PAGE=pages; if(PAGE<1)PAGE=1;
+  const slice=ordered.slice((PAGE-1)*per,PAGE*per);
+  let html="",last=-1;
+  for(const [gi,n] of slice){
+    if(gi!==last){const [ico,label]=GR[gi];html+=`<div class="grp">${ICO[ico]}${label}<span class="n">${g[gi].length.toLocaleString()}</span></div>`;last=gi;}
+    html+=rowHTML(n);
+  }
+  el.innerHTML=html+pagerHTML(pages,ordered.length,per);
+  el.scrollTop=0;
+}
+function pagerHTML(pages,total,per){
+  if(pages<=1&&total<=per)return "";
+  const b=(n,l,dis,on)=>`<button data-page="${n}" ${dis?"disabled":""} class="${on?"on":""}">${l}</button>`;
+  let nums=[];const set=new Set([1,pages,PAGE-1,PAGE,PAGE+1,PAGE-2,PAGE+2].filter(x=>x>=1&&x<=pages));
+  [...set].sort((a,b)=>a-b).forEach((n,i,arr)=>{if(i&&n-arr[i-1]>1)nums.push('<span class="gap">…</span>');nums.push(b(n,n,false,n===PAGE));});
+  const from=(PAGE-1)*per+1,to=Math.min(PAGE*per,total);
+  return `<div class="pager">${b(PAGE-1,"‹",PAGE<=1)}${nums.join("")}${b(PAGE+1,"›",PAGE>=pages)}
+    <span class="info">${from.toLocaleString()}–${to.toLocaleString()} / ${total.toLocaleString()}건</span>
+    <select id="per">${[25,50,100,200].map(v=>`<option value="${v}" ${v===per?"selected":""}>${v}개씩</option>`).join("")}</select></div>`;
 }
 
 function syncUI(){
@@ -373,10 +404,11 @@ function syncSrc(){
     $("pDesc").textContent=S.src==="mine"?(MYKW?"이 브라우저에만 저장됩니다.":"아직 비어 있습니다. 직접 입력하거나 [기본값 복사해오기].") :"모두가 함께 쓰는 값입니다. 고치려면 [기본값 편집].";
   }
 }
-function update(){save(LS_S,S);render();syncUI();}
+function update(){PAGE=1;save(LS_S,S);render();syncUI();}
 
 document.addEventListener("click",e=>{
   const b=e.target.closest("button");
+  if(b&&b.dataset.page!==undefined){PAGE=+b.dataset.page;render();return;}
   if(b&&b.dataset.src!==undefined){S.src=b.dataset.src;save(LS_S,S);fillKw();judgeAll();update();return;}
   if(b&&b.dataset.view!==undefined){S.view=b.dataset.view;update();return;}
   if(b&&b.dataset.tag!==undefined){S.tag=(S.tag===b.dataset.tag&&b.closest("#mnav"))?"":b.dataset.tag;update();return;}
@@ -385,6 +417,7 @@ document.addEventListener("click",e=>{
   const a=e.target.closest("a[data-copy]");
   if(a){navigator.clipboard&&navigator.clipboard.writeText(a.dataset.copy).catch(()=>{});const c=$("count"),o=c.textContent;c.textContent="등록번호 복사됨 — 나라장터에 붙여넣기";setTimeout(()=>c.textContent=o,4000);}
 });
+document.addEventListener("change",e=>{if(e.target.id==="per"){S.per=+e.target.value;update();}});
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter"){S.q=$("q").value;update();}});
 $("q").addEventListener("search",()=>{if(!$("q").value){S.q="";update();}});
 document.addEventListener("keydown",e=>{if(e.key==="/"&&!["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)){e.preventDefault();$("q").focus();}});
