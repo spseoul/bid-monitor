@@ -40,6 +40,7 @@ class LHBoardCollector(BaseCollector):
         cfg = cfg or {}
         self.boards = cfg.get("boards") or DEFAULT_BOARDS
         self.max_pages = int(cfg.get("max_pages", 5))
+        self.min_days = int(cfg.get("days", 30))      # 증분 수집이어도 게시판은 항상 이 기간을 훑음 (가벼움)
         self.detail = bool(cfg.get("fetch_detail", True))
         self.known: set[str] = set()
         self.sess = _make_session()
@@ -112,7 +113,7 @@ class LHBoardCollector(BaseCollector):
         return out
 
     def collect(self, lookback_days: int) -> list[Notice]:
-        cutoff = (datetime.now() - timedelta(days=lookback_days)).strftime("%Y-%m-%d")
+        cutoff = (datetime.now() - timedelta(days=max(lookback_days, self.min_days))).strftime("%Y-%m-%d")
         out: dict[str, Notice] = {}
         for b in self.boards:
             stop = False
