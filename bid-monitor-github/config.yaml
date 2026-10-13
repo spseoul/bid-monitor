@@ -4,9 +4,9 @@
 # 관리자 모드 비밀번호 (페이지에서 회사 기본값 파일을 만들 때 필요)
 # 주의: 이 값 자체는 페이지에 실리지 않고, 해시(되돌릴 수 없는 값)만 실립니다.
 admin_password: sps123
-admin_token_enc: tECnTyPoz2fb0pyIJfnAwQ==.3jC9c5jpmxI4GBdA.AnPXfD4uF6LOLdSd4rOK7d7NNHLtw52QCUt+7pbOd/GBpScIYyuMZAzSIyhQqxjDut++rF9HAG7KcS5TCdFDCcEw/Rr0Pi/+d2SpS0S7qfriEKRta9CDzJ3zmI5RAnccu3BcIlz+doyYN1oOWw==
+admin_token_enc:
 # 관리자 모드에서 이 파일을 직접 저장할 위치
-github_repo: spseoul-dev/bid-monitor
+github_repo: wwwonnnh-dev/bid-monitor
 github_config_path: bid-monitor-github/config.yaml
 
 # 페이지에 담을 기간: 최근 N일
