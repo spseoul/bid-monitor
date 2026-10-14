@@ -29,12 +29,22 @@ log = logging.getLogger("build")
 DOCS = ROOT / "docs"
 INDEX = DOCS / "index.html"
 SEEN = DOCS / "seen.json"
+DATAF = DOCS / "data.json"
+STATIC = ROOT / "bidmon" / "static"      # sw.js, manifest, 아이콘 → docs/ 로 복사
 KEEP = ["key", "notice_no", "title", "institution", "demand_institution", "notice_date", "close_date",
         "estimated_price", "budget", "award_method", "notice_kind", "url", "tags", "category"]
 
 
 def load_previous() -> dict[str, dict]:
-    """이전 index.html 안의 DATA 를 key→row 로 복원"""
+    """이전 data.json (없으면 옛 index.html 안의 DATA) 을 key→row 로 복원"""
+    if DATAF.exists():
+        try:
+            rows = json.loads(DATAF.read_text(encoding="utf-8"))
+            rows = rows if isinstance(rows, list) else rows.get("data", [])
+            if rows:
+                return {r["key"]: r for r in rows if r.get("key")}
+        except json.JSONDecodeError:
+            pass
     if not INDEX.exists():
         return {}
     m = re.search(r"const DATA=(\[.*?\]);\n", INDEX.read_text(encoding="utf-8"), re.S)
@@ -121,7 +131,8 @@ def main():
         (cfg.get("admin_password") or "sps-admin").encode()).hexdigest()
     now = now_kst()
     html = ((ROOT / "bidmon" / "page.html").read_text(encoding="utf-8")
-            .replace("__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+            .replace("__DATA__", "[]")                       # 데이터는 data.json 으로 분리
+            .replace("__DATAVER__", now.strftime("%Y%m%d%H%M"))
             .replace("__KW__", json.dumps(kw, ensure_ascii=False))
             .replace("__CFGHEAD__", json.dumps(head, ensure_ascii=False))
             .replace("__ADMIN_HASH__", admin_hash)
@@ -132,8 +143,14 @@ def main():
             .replace("__NOW__", now.strftime("%Y-%m-%dT%H:%M:%S")))
     DOCS.mkdir(exist_ok=True)
     INDEX.write_text(html, encoding="utf-8")
+    DATAF.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    if STATIC.exists():
+        import shutil
+        for f in STATIC.iterdir():
+            if f.is_file():
+                shutil.copy2(f, DOCS / f.name)
     SEEN.write_text(json.dumps(seen, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    log.info("index.html 생성: 신규 수집 %d건, 페이지 총 %d건, %.1f MB", len(notices), len(data), INDEX.stat().st_size / 1e6)
+    log.info("index.html + data.json 생성: 신규 수집 %d건, 페이지 총 %d건, data %.1f MB", len(notices), len(data), DATAF.stat().st_size / 1e6)
 
 
 if __name__ == "__main__":
