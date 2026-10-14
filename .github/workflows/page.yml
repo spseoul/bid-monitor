@@ -1,0 +1,34 @@
+name: 페이지 반영
+
+# bidmon/page.html 또는 bidmon/static/* 을 올리면 수집 없이 바로 사이트에 반영
+on:
+  push:
+    paths:
+      - "bid-monitor-github/bidmon/page.html"
+      - "bid-monitor-github/bidmon/static/**"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: collect
+  cancel-in-progress: false
+
+jobs:
+  copy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: page.html → docs/index.html
+        run: |
+          mkdir -p docs bid-monitor-github/docs
+          cp bid-monitor-github/bidmon/page.html docs/index.html
+          cp bid-monitor-github/bidmon/page.html bid-monitor-github/docs/index.html
+          cp bid-monitor-github/bidmon/static/* docs/ 2>/dev/null || true
+          cp bid-monitor-github/bidmon/static/* bid-monitor-github/docs/ 2>/dev/null || true
+          git config user.name "bid-bot"
+          git config user.email "bid-bot@users.noreply.github.com"
+          git add docs bid-monitor-github/docs
+          git diff --cached --quiet || git commit -m "페이지 반영 $(date +'%Y-%m-%d %H:%M')"
+          git push
