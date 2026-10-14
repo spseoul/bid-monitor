@@ -238,7 +238,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
     <button data-theme="light"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/></svg>라이트</button>
     <button data-theme="dark"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8Z"/></svg>다크</button>
   </div>
-  <div class="asof">__DATE__ 갱신<br>최근 30일 · <span id="total"></span>건</div>
+  <div class="asof"><span id="asofDate"></span> 갱신<br>최근 30일 · <span id="total"></span>건</div>
 </aside>
 
 <main>
@@ -270,13 +270,13 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 <nav class="tabbar" id="tabbar"></nav>
 
 <script>
-let DATA=__DATA__;
-const DATA_URL="data.json?v=__DATAVER__";
-const DEFAULT_KW=__KW__;
-const BUILT="__NOW__";
-const CONFIG_HEAD=__CFGHEAD__;
-const NOW=new Date(BUILT);
-const TODAY=BUILT.slice(0,10);
+/* 설정·데이터는 빌드 시 끼워 넣지 않고 meta.json / data.json 에서 읽음 → 이 파일을 그대로 docs/index.html 로 쓸 수 있음 */
+let DATA=[];
+let DEFAULT_KW={include:[],exclude:[]};
+let BUILT=new Date().toISOString().slice(0,19);
+let CONFIG_HEAD="";
+let NOW=new Date(BUILT);
+let TODAY=BUILT.slice(0,10);
 const LS_KW="bidmon.kw",LS_S="bidmon.filters2";
 const VIEWS={new:"오늘 신규",urgent:"마감 임박",matched:"관심 공고",pre:"사전규격",all:"전체 공고"};
 const $=id=>document.getElementById(id);
@@ -461,10 +461,10 @@ $("btnReset2").onclick=()=>{
 };
 
 /* ── 기본값 편집 모드 (비밀번호를 아는 사람 누구나) ── */
-const ADMIN_HASH="__ADMIN_HASH__";
-const GH_REPO="__GH_REPO__", GH_PATH="__GH_PATH__";
-let TOKEN_ENC="__TOKEN_ENC__";
-let ADMIN=false, DRAFT=null, TOKEN="", HEAD=CONFIG_HEAD||"";
+let ADMIN_HASH="";
+let GH_REPO="", GH_PATH="";
+let TOKEN_ENC="";
+let ADMIN=false, DRAFT=null, TOKEN="", HEAD="";
 
 const enc=new TextEncoder(), dec=new TextDecoder();
 async function sha256(t){const b=await crypto.subtle.digest("SHA-256",enc.encode(t));return [...new Uint8Array(b)].map(x=>x.toString(16).padStart(2,"0")).join("");}
@@ -567,7 +567,7 @@ function applyDefaults(kw,refill=true){
   judgeAll();render();syncUI();
 }
 /* 페이지를 열 때 최신 기본값을 GitHub 에서 직접 읽어옴 */
-(async()=>{
+async function loadLiveDefaults(){
   if(!GH_REPO||!GH_PATH)return;
   try{
     const r=await fetch(`https://raw.githubusercontent.com/${GH_REPO}/main/${GH_PATH}?t=`+Date.now(),{cache:"no-store"});
@@ -582,7 +582,7 @@ function applyDefaults(kw,refill=true){
       applyDefaults({include:inc,exclude:exc});
     }
   }catch(e){}
-})();
+}
 /* ── 테마: 자동 / 라이트 / 다크 ── */
 const LS_TH="bidmon.theme";
 function getTheme(){try{return localStorage.getItem(LS_TH)||"auto";}catch(e){return "auto";}}
@@ -598,10 +598,15 @@ setTheme(getTheme());
 fillKw();
 /* ── 데이터 로드: index.html 은 틀만, 공고 데이터는 data.json 으로 분리 (모바일 첫 화면 즉시 표시) ── */
 async function loadData(){
-  if(DATA.length){judgeAll();render();syncUI();return;}
   $("list").innerHTML='<div class="empty">공고를 불러오는 중…</div>';
   try{
-    const r=await fetch(DATA_URL,{cache:"no-cache"});
+    let m={};
+    try{m=await (await fetch("meta.json?t="+Date.now(),{cache:"no-cache"})).json();}catch(e){}   // 아직 meta.json 이 없어도 데이터는 보여줌
+    DEFAULT_KW=m.kw||DEFAULT_KW; BUILT=m.built||BUILT; NOW=new Date(BUILT); TODAY=BUILT.slice(0,10);
+    CONFIG_HEAD=m.config_head||""; HEAD=CONFIG_HEAD; ADMIN_HASH=m.admin_hash||""; GH_REPO=m.github_repo||""; GH_PATH=m.github_config_path||""; TOKEN_ENC=m.admin_token_enc||"";
+    $("asofDate").textContent=(m.date||BUILT.replace("T"," ").slice(0,16));
+    fillKw();
+    const r=await fetch("data.json?v="+(m.ver||Date.now()),{cache:"no-cache"});
     if(!r.ok)throw new Error(r.status);
     const j=await r.json();
     DATA=Array.isArray(j)?j:(j.data||[]);
@@ -610,6 +615,7 @@ async function loadData(){
     return;
   }
   judgeAll();render();syncUI();
+  loadLiveDefaults();
 }
 loadData();
 /* ── PWA: 홈 화면 추가 + 오프라인 캐시 ── */
