@@ -237,6 +237,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
     <button class="tab" data-cat="지자체">지자체</button>
     <button class="tab" data-cat="중앙정부">중앙정부</button>
     <button class="tab" data-cat="교육기관">교육기관</button>
+    <button class="tab" data-cat="조합">조합</button>
     <span class="r">
       <select id="kind"><option value="">종류: 전체</option><option value="bid">입찰공고</option><option value="pre">사전규격</option></select>
       <select id="open"><option value="1">진행 중</option><option value="">마감 포함</option></select>
@@ -306,7 +307,7 @@ function counts(){
 }
 
 const TAGC={LH:"var(--green)",GH:"var(--acc)",IH:"var(--purple)",SH:"var(--orange)"};
-const CATC={"공공기관":["공","#4cb782"],"지자체":["지","#4ea7fc"],"교육기관":["교","#f2c94c"],"중앙정부":["중","#a78bfa"],"기타":["기","#8a8f98"]};
+const CATC={"공공기관":["공","#4cb782"],"지자체":["지","#4ea7fc"],"교육기관":["교","#f2c94c"],"중앙정부":["중","#a78bfa"],"조합":["조","#f2994a"],"기타":["기","#8a8f98"]};
 const ICO={
  u:'<svg class="st" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--red)" stroke-width="1.6"/><path d="M8 8V4.2" stroke="var(--red)" stroke-width="1.6" stroke-linecap="round"/><path d="M8 8l2.6 1.6" stroke="var(--red)" stroke-width="1.6" stroke-linecap="round"/></svg>',
  m:'<svg class="st" viewBox="0 0 16 16"><circle cx="8" cy="8" r="6.5" fill="none" stroke="var(--amber)" stroke-width="1.6" stroke-dasharray="2.2 2.2"/><circle cx="8" cy="8" r="2.6" fill="var(--amber)"/></svg>',
