@@ -6,7 +6,7 @@
 admin_password: sps123
 admin_token_enc:
 # 관리자 모드에서 이 파일을 직접 저장할 위치
-github_repo: wwwonnnh-dev/bid-monitor
+github_repo: spseoul/bid-monitor
 github_config_path: bid-monitor-github/config.yaml
 
 # 페이지에 담을 기간: 최근 N일
