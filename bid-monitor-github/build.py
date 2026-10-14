@@ -131,25 +131,25 @@ def main():
         (cfg.get("admin_password") or "sps-admin").encode()).hexdigest()
     now = now_kst()
     tpl = (ROOT / "bidmon" / "page.html").read_text(encoding="utf-8")
-    data_js = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
-    # 새 템플릿(data.json 분리 지원)이면 틀만, 옛 템플릿이면 예전처럼 데이터를 HTML 안에 포함 (빈 페이지 방지)
-    inline = "__DATAVER__" not in tpl
-    if inline:
-        log.warning("page.html 이 옛 버전입니다 (data.json 분리 미지원) → 데이터를 HTML 에 포함")
-    html = (tpl
-            .replace("__DATA__", data_js if inline else "[]")
-            .replace("__DATAVER__", now.strftime("%Y%m%d%H%M"))
-            .replace("__KW__", json.dumps(kw, ensure_ascii=False))
-            .replace("__CFGHEAD__", json.dumps(head, ensure_ascii=False))
-            .replace("__ADMIN_HASH__", admin_hash)
-            .replace("__GH_REPO__", cfg.get("github_repo", ""))
-            .replace("__GH_PATH__", cfg.get("github_config_path", ""))
-            .replace("__TOKEN_ENC__", str(cfg.get("admin_token_enc", "") or ""))
-            .replace("__DATE__", now.strftime("%Y-%m-%d %H:%M"))
-            .replace("__NOW__", now.strftime("%Y-%m-%dT%H:%M:%S")))
+    meta = {
+        "built": now.strftime("%Y-%m-%dT%H:%M:%S"), "date": now.strftime("%Y-%m-%d %H:%M"),
+        "ver": now.strftime("%Y%m%d%H%M"), "total": len(data), "kw": kw, "config_head": head,
+        "admin_hash": admin_hash, "github_repo": cfg.get("github_repo", ""),
+        "github_config_path": cfg.get("github_config_path", ""),
+        "admin_token_enc": str(cfg.get("admin_token_enc", "") or ""),
+    }
+    if "__DATAVER__" in tpl or "__DATA__" in tpl:      # 옛 템플릿 호환
+        html = (tpl.replace("__DATA__", json.dumps(data, ensure_ascii=False, separators=(",", ":")))
+                .replace("__DATAVER__", meta["ver"]).replace("__KW__", json.dumps(kw, ensure_ascii=False))
+                .replace("__CFGHEAD__", json.dumps(head, ensure_ascii=False)).replace("__ADMIN_HASH__", admin_hash)
+                .replace("__GH_REPO__", meta["github_repo"]).replace("__GH_PATH__", meta["github_config_path"])
+                .replace("__TOKEN_ENC__", meta["admin_token_enc"]).replace("__DATE__", meta["date"]).replace("__NOW__", meta["built"]))
+    else:
+        html = tpl                                       # 새 템플릿: 그대로 복사 (설정은 meta.json 에서 읽음)
     DOCS.mkdir(exist_ok=True)
     INDEX.write_text(html, encoding="utf-8")
     DATAF.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    (DOCS / "meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
     if STATIC.exists():
         import shutil
         for f in STATIC.iterdir():
