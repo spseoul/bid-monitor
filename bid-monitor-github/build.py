@@ -130,8 +130,14 @@ def main():
     admin_hash = os.getenv("ADMIN_PW_HASH", "").strip() or hashlib.sha256(
         (cfg.get("admin_password") or "sps-admin").encode()).hexdigest()
     now = now_kst()
-    html = ((ROOT / "bidmon" / "page.html").read_text(encoding="utf-8")
-            .replace("__DATA__", "[]")                       # 데이터는 data.json 으로 분리
+    tpl = (ROOT / "bidmon" / "page.html").read_text(encoding="utf-8")
+    data_js = json.dumps(data, ensure_ascii=False, separators=(",", ":"))
+    # 새 템플릿(data.json 분리 지원)이면 틀만, 옛 템플릿이면 예전처럼 데이터를 HTML 안에 포함 (빈 페이지 방지)
+    inline = "__DATAVER__" not in tpl
+    if inline:
+        log.warning("page.html 이 옛 버전입니다 (data.json 분리 미지원) → 데이터를 HTML 에 포함")
+    html = (tpl
+            .replace("__DATA__", data_js if inline else "[]")
             .replace("__DATAVER__", now.strftime("%Y%m%d%H%M"))
             .replace("__KW__", json.dumps(kw, ensure_ascii=False))
             .replace("__CFGHEAD__", json.dumps(head, ensure_ascii=False))
