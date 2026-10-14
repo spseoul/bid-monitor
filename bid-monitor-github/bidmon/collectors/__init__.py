@@ -5,5 +5,6 @@ from .lh import LHCollector
 from .lh_board import LHBoardCollector
 from .seoul_cleanup import SeoulCleanupCollector
 from .busan_dynamice import BusanDynamiceCollector
+from .agency_boards import SHBoardCollector, GHBoardCollector
 
-__all__ = ["BaseCollector", "G2BCollector", "G2BPrespecCollector", "LHCollector", "LHBoardCollector", "SeoulCleanupCollector", "BusanDynamiceCollector"]
+__all__ = ["BaseCollector", "G2BCollector", "G2BPrespecCollector", "LHCollector", "LHBoardCollector", "SeoulCleanupCollector", "BusanDynamiceCollector", "SHBoardCollector", "GHBoardCollector"]
