@@ -102,7 +102,10 @@ def main():
         prev[n.key] = d          # 새 정보로 덮어씀 (변경공고 반영)
 
     cutoff = (now_kst() - timedelta(days=keep_days)).strftime("%Y-%m-%d")
-    data = [r for r in prev.values() if (r.get("notice_date") or "") >= cutoff]
+    today_s = now_kst().strftime("%Y-%m-%d")
+    # 최근 N일 공고 + (공고일이 오래됐어도) 아직 마감 전인 공고는 유지 (공고~개찰 한 달 넘는 용역 누락 방지)
+    data = [r for r in prev.values()
+            if (r.get("notice_date") or "") >= cutoff or (r.get("close_date") or "")[:10] >= today_s]
     for r in data:
         r.setdefault("first_seen", seen.get(r["key"], today))
     data.sort(key=lambda r: r["notice_date"] or "", reverse=True)
