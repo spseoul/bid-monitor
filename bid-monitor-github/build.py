@@ -52,6 +52,8 @@ def main():
     keep_days = int(cfg.get("lookback_days", 30))
     prev = load_previous()
     days = int(cfg.get("incremental_days", 3)) if prev else keep_days
+    if os.getenv("BIDMON_DAYS"):          # full_refresh.bat 등에서 일시적으로 수집 범위를 넓힐 때
+        days = int(os.getenv("BIDMON_DAYS"))
     log.info("이전 공고 %d건, 이번 수집 범위 최근 %d일", len(prev), days)
 
     collectors = [G2BCollector(cfg["g2b"])]
