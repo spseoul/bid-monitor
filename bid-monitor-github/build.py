@@ -21,7 +21,7 @@ from pathlib import Path
 
 from bidmon.config import load_config, ROOT
 from bidmon.filters import tag_institutions, categorize
-from bidmon.collectors import G2BCollector, G2BPrespecCollector, LHCollector, LHBoardCollector, SeoulCleanupCollector, BusanDynamiceCollector
+from bidmon.collectors import G2BCollector, G2BPrespecCollector, LHCollector, LHBoardCollector, SeoulCleanupCollector, BusanDynamiceCollector, SHBoardCollector, GHBoardCollector
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 log = logging.getLogger("build")
@@ -77,6 +77,10 @@ def main():
         bd = BusanDynamiceCollector(bd_cfg)
         bd.known = set(prev)
         collectors.append(bd)
+    for C, key in ((SHBoardCollector, "sh_board"), (GHBoardCollector, "gh_board")):   # SH 현상설계 / GH 공모 게시판
+        c_cfg = cfg.get(key) or {}
+        if c_cfg.get("enabled", True):
+            c = C(c_cfg); c.known = set(prev); collectors.append(c)
     notices = []
     for c in collectors:
         notices += c.safe_collect(days)
