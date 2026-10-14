@@ -1,9 +1,21 @@
 from .models import Notice
 
 
+# 기관명이 바뀐 경우를 위한 보조 별칭 (config.yaml 에 없어도 태그가 붙도록)
+_ALIASES = {
+    "SH": ["서울주택도시개발공사", "서울주택도시공사", "SH공사"],
+    "GH": ["경기주택도시공사", "경기도시공사"],
+    "IH": ["인천도시공사"],
+    "LH": ["한국토지주택공사"],
+}
+
+
 def tag_institutions(n: Notice, institutions: dict[str, list[str]]) -> None:
     hay = f"{n.institution} {n.demand_institution}"
-    tags = [tag for tag, names in institutions.items() if any(x in hay for x in names)]
+    tags = []
+    for tag, names in institutions.items():
+        if any(x in hay for x in list(names) + _ALIASES.get(tag, [])):
+            tags.append(tag)
     n.tags = ",".join(tags)
 
 
