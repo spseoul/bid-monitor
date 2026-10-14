@@ -2,7 +2,13 @@
 <html lang="ko">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="theme-color" content="#5e6ad2">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="입찰공고">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icon-192.png">
 <meta name="color-scheme" content="dark light">
 <script>try{var t=localStorage.getItem("bidmon.theme");if(t==="light"||t==="dark")document.documentElement.dataset.theme=t;}catch(e){}</script>
 <title>입찰공고 모니터</title>
@@ -255,7 +261,8 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 </main>
 
 <script>
-const DATA=__DATA__;
+let DATA=__DATA__;
+const DATA_URL="data.json?v=__DATAVER__";
 const DEFAULT_KW=__KW__;
 const BUILT="__NOW__";
 const CONFIG_HEAD=__CFGHEAD__;
@@ -573,6 +580,26 @@ function setTheme(t){
 $("theme").addEventListener("click",e=>{const b=e.target.closest("button");if(b)setTheme(b.dataset.theme);});
 $("mTheme").onclick=()=>{const o=["auto","light","dark"];setTheme(o[(o.indexOf(getTheme())+1)%3]);};
 setTheme(getTheme());
-fillKw();judgeAll();render();syncUI();
+fillKw();
+/* ── 데이터 로드: index.html 은 틀만, 공고 데이터는 data.json 으로 분리 (모바일 첫 화면 즉시 표시) ── */
+async function loadData(){
+  if(DATA.length){judgeAll();render();syncUI();return;}
+  $("list").innerHTML='<div class="empty">공고를 불러오는 중…</div>';
+  try{
+    const r=await fetch(DATA_URL,{cache:"no-cache"});
+    if(!r.ok)throw new Error(r.status);
+    const j=await r.json();
+    DATA=Array.isArray(j)?j:(j.data||[]);
+  }catch(e){
+    $("list").innerHTML='<div class="empty">데이터를 불러오지 못했습니다. 네트워크를 확인한 뒤 새로고침해 주세요.</div>';
+    return;
+  }
+  judgeAll();render();syncUI();
+}
+loadData();
+/* ── PWA: 홈 화면 추가 + 오프라인 캐시 ── */
+if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
+  navigator.serviceWorker.register("sw.js").catch(()=>{});
+}
 </script>
 </body></html>
