@@ -118,6 +118,10 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 #panel.open{display:block}
 #panel.admin{background:color-mix(in srgb,var(--amber) 9%,var(--panel))}
 .pin{padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
+#btnKw2{display:none}
+.srcsw{display:none;gap:4px;background:var(--fld);border:1px solid var(--line);border-radius:8px;padding:3px}
+.srcsw button{flex:1;padding:7px 0;border-radius:6px;font-size:13px;color:var(--ink2)}
+.srcsw button.on{background:var(--panel);color:var(--ink);font-weight:600;box-shadow:0 1px 2px rgba(0,0,0,.08)}
 .phd{grid-column:1/-1;display:flex;align-items:center;gap:10px;flex-wrap:wrap}
 .phd b{font-size:13px}.phd span{font-size:12px;color:var(--ink3)}
 .phd .btn{margin-left:auto}
@@ -137,7 +141,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .mnav{display:none}
 /* ── 태블릿 세로 (601~900px): 좁은 아이콘 사이드바 유지 ── */
 /* ── 태블릿 세로 (601~1024px): 전체 사이드바 + 2줄 행 ── */
-@media (max-width:1024px) and (min-width:601px){
+@media (max-width:1024px) and (min-width:601px) and (orientation:landscape){
   body{grid-template-columns:200px 1fr;padding:8px}
   aside{padding:12px 10px;top:8px;height:calc(100vh - 16px)}
   .ws .logo{width:22px;height:22px}
@@ -163,7 +167,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .tabbar button b{position:absolute;top:6px;right:calc(50% - 22px);background:var(--red);color:#fff;font-size:9.5px;font-weight:600;border-radius:999px;padding:1px 5px;line-height:1.3}
 .tabbar button.on b{background:var(--acc)}
 /* ── 폰 (~600px): 리니어 모바일처럼 2줄 행 ── */
-@media (max-width:600px){
+@media (max-width:600px), ((max-width:1024px) and (orientation:portrait) and (pointer:coarse)){
   body{grid-template-columns:1fr;padding:0}
   aside{display:none}
   main{border:0;border-radius:0;min-height:100vh}
@@ -196,7 +200,11 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   .amt{width:auto;font-size:11.5px}.date{width:auto;font-size:11.5px}
   .amt::after{content:"";}
   .pin{grid-template-columns:1fr;padding:12px}
-  .mtheme{display:inline-block;font-size:15px;padding:2px 9px}
+  .mtheme,#btnKw2{display:inline-flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border-radius:999px;font-size:16px}
+  #btnKw2 svg{width:18px;height:18px}
+  .top .r{display:flex;gap:6px;align-items:center}
+  .srcsw{display:flex}
+  .phd{flex-wrap:wrap}
   /* 앱형: 하단 탭바 */
   :root{--tabh:60px}
   main{padding-bottom:calc(var(--tabh) + env(safe-area-inset-bottom))}
@@ -243,7 +251,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 
 <main>
   <div class="top"><span id="vtitle">관심 공고</span><span class="cnt" id="count"></span>
-    <span class="r" style="margin-left:auto"><button class="btn" id="btnKw2" hidden>키워드</button><button class="btn mtheme" id="mTheme" title="테마">◐</button></span>
+    <span class="r" style="margin-left:auto"><button class="btn ico" id="btnKw2" title="키워드 편집"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"><path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.3"/></svg></button><button class="btn mtheme" id="mTheme" title="테마">◐</button></span>
   </div>
   <div class="bar">
     <button class="tab on" data-cat="">전체</button>
@@ -261,6 +269,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   <div class="mnav" id="mnav"></div>
   <div id="panel"><div class="pin">
     <div class="phd"><b id="pTitle">회사 기본값</b><span id="pDesc"></span><button class="btn" id="btnMode">기본값 편집</button></div>
+    <div class="srcsw" id="srcsw"><button data-src="default">회사 기본값</button><button data-src="mine">내 키워드</button></div>
     <div><h2>포함 키워드</h2><p>공고명에 하나라도 있으면 관심 공고. 한 줄에 하나.</p><textarea id="kwInc"></textarea></div>
     <div><h2>제외 키워드</h2><p>공고명에 있으면 제외. 한 줄에 하나.</p><textarea id="kwExc"></textarea></div>
     <div class="act"><button class="btn p" id="btnSave">저장</button><button class="btn" id="btnReset2">기본값 복사해오기</button><button class="btn" id="btnClose">닫기</button><span class="msg" id="kwMsg"></span><span class="tokwrap" id="btnTok" hidden></span></div>
@@ -365,7 +374,7 @@ function render(){
   $("count").textContent=rows.length.toLocaleString();
   const el=$("list");
   if(!rows.length){
-    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. 왼쪽 [키워드 편집]에서 키워드를 넣어 주세요.":"조건에 맞는 공고가 없습니다.")+'</div>';
+    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":"조건에 맞는 공고가 없습니다.")+'</div>';
     return;
   }
   const g=[[],[],[],[]];   // 이번 주 / 다음 주 / 이후 / 마감일 없음
@@ -389,7 +398,7 @@ function render(){
   }
   el.innerHTML=html+pagerHTML(pages,ordered.length,per);
   el.scrollTop=0;
-  if(window.innerWidth<=600)window.scrollTo(0,0);
+  if(getComputedStyle($("tabbar")).display!=="none")window.scrollTo(0,0);
 }
 function pagerHTML(pages,total,per){
   if(pages<=1&&total<=per)return "";
@@ -419,7 +428,7 @@ function syncUI(){
 }
 function fillKw(){const K=curKW();$("kwInc").value=K.include.join("\n");$("kwExc").value=K.exclude.join("\n");}
 function syncSrc(){
-  document.querySelectorAll("#nav [data-src]").forEach(b=>b.classList.toggle("on",b.dataset.src===S.src));
+  document.querySelectorAll("[data-src]").forEach(b=>b.classList.toggle("on",b.dataset.src===S.src));
   $("s-default").textContent=S.src==="default"?"사용 중":"";
   $("s-mine").textContent=S.src==="mine"?"사용 중":(MYKW?"저장됨":"미설정");
   if(!ADMIN){
