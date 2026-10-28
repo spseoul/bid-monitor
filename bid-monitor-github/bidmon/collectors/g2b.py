@@ -133,7 +133,8 @@ class G2BCollector(BaseCollector):
             institution=str(it.get("ntceInsttNm", "")).strip(),
             demand_institution=str(it.get("dminsttNm", "")).strip(),
             notice_date=_fmt_dt(it.get("bidNtceDt") or it.get("rgstDt")),
-            close_date=_fmt_dt(it.get("bidClseDt")),
+            # 협상에 의한 계약 등은 bidClseDt(입찰마감)가 비어 오고 opengDt(개찰일시)만 있음 → 개찰일시를 마감으로 사용
+            close_date=_fmt_dt(it.get("bidClseDt")) or _fmt_dt(it.get("opengDt")),
             open_date=_fmt_dt(it.get("opengDt")),
             estimated_price=_to_int(it.get("presmptPrce")),
             budget=_to_int(it.get("asignBdgtAmt")),
