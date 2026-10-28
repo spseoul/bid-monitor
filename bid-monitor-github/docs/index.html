@@ -83,6 +83,13 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 .grp .n{color:var(--ink3);font-weight:400;font-size:12px}
 .row{display:flex;align-items:center;gap:10px;padding:0 14px;height:40px;border-bottom:1px solid var(--line2)}
 .row:hover{background:var(--hov)}
+.chk{display:inline-flex;flex:none;width:18px;height:18px;align-items:center;justify-content:center;cursor:pointer;margin-left:-4px}
+.chk input{position:absolute;opacity:0;width:0;height:0}
+.chk i{width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;display:block;background:var(--bg);transition:.12s}
+.chk:hover i{border-color:var(--ink3)}
+.chk input:checked+i{background:var(--acc);border-color:var(--acc);background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Cpath d='M3.5 8.5l3 3 6-6.5' fill='none' stroke='white' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");background-size:13px;background-position:center;background-repeat:no-repeat}
+.row.starred .t{font-weight:600}
+.lbl.link{border-color:var(--acc);color:var(--acc)}
 .pri{display:flex;align-items:flex-end;gap:1.5px;height:11px;width:13px;flex:none}
 .pri i{width:3px;border-radius:1px;display:block;background:var(--ink3)}
 .pri i:nth-child(1){height:4px}.pri i:nth-child(2){height:7.5px}.pri i:nth-child(3){height:11px}
@@ -153,6 +160,8 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   .fld input{width:150px}
   .bar .tab{padding:4px 9px}
   .row{height:auto;display:grid;grid-template-columns:13px 46px 1fr;grid-template-rows:auto auto;column-gap:8px;row-gap:3px;padding:10px 14px;align-items:center}
+  .row:has(.chk){grid-template-columns:18px 13px 46px 1fr}
+  .chk{grid-row:1/3;grid-column:1}.row:has(.chk) .pri{grid-column:2}.row:has(.chk) .dd{grid-column:3}.row:has(.chk) .t,.row:has(.chk) .right{grid-column:4}
   .pri{grid-row:1;grid-column:1}.dd{grid-row:1;grid-column:2}.row .st{display:none}
   .t{grid-row:1;grid-column:3;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .right{grid-row:2;grid-column:3;gap:8px;flex-wrap:nowrap;min-width:0;overflow:hidden;font-size:12px;color:var(--ink3)}
@@ -185,6 +194,8 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   .grp{padding:6px 12px}
   /* 행: 1줄 = 막대·D-day·제목 / 2줄 = 기관 · 금액 · 마감 */
   .row{height:auto;display:grid;grid-template-columns:13px 46px 1fr;grid-template-rows:auto auto;column-gap:8px;row-gap:3px;padding:9px 12px;align-items:center}
+  .row:has(.chk){grid-template-columns:18px 13px 46px 1fr}
+  .chk{grid-row:1/3;grid-column:1}.row:has(.chk) .pri{grid-column:2}.row:has(.chk) .dd{grid-column:3}.row:has(.chk) .t,.row:has(.chk) .right{grid-column:4}
   .pri{grid-row:1;grid-column:1}
   .dd{grid-row:1;grid-column:2}
   .row .st{display:none}
@@ -225,10 +236,9 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
     <span class="tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
   </div>
   <div class="nav" id="nav">
-    <button class="it" data-view="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 10-12h-8Z"/></svg>오늘 신규<span class="n" id="n-new"></span></button>
-    <button class="it" data-view="urgent"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 9.5h17M8 3v4M16 3v4"/></svg>마감 임박<span class="n" id="n-urgent"></span></button>
-    <button class="it on" data-view="matched"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3.2"/></svg>관심 공고<span class="n" id="n-matched"></span></button>
+    <button class="it on" data-view="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 10-12h-8Z"/></svg>신규 공고<span class="n" id="n-new"></span></button>
     <button class="it" data-view="pre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 9h8M8 13h5"/></svg>사전규격<span class="n" id="n-pre"></span></button>
+    <button class="it" data-view="matched"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>관심 공고<span class="n" id="n-matched"></span></button>
     <button class="it" data-view="all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>전체<span class="n" id="n-all"></span></button>
     <div class="sec">기관</div>
     <button class="it on" data-tag="">전체 기관</button>
@@ -287,11 +297,19 @@ let CONFIG_HEAD="";
 let NOW=new Date(BUILT);
 let TODAY=BUILT.slice(0,10);
 const LS_KW="bidmon.kw",LS_S="bidmon.filters2";
-const VIEWS={new:"오늘 신규",urgent:"마감 임박",matched:"관심 공고",pre:"사전규격",all:"전체 공고"};
+const VIEWS={new:"신규 공고",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
+const NEW_DAYS=10;   // 신규 공고: 최근 N일 내 처음 수집된 공고
+const LS_STAR="bidmon.star";
 const $=id=>document.getElementById(id);
 const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
-const S=Object.assign({view:"matched",tag:"",q:"",cat:"",kind:"",open:"1",src:"default",per:50},load(LS_S,{}));
+const S=Object.assign({view:"new",tag:"",q:"",cat:"",kind:"",open:"1",src:"default",per:50},load(LS_S,{}));
+if(!VIEWS[S.view])S.view="new";
+/* 관심공고: 사전규격에서 체크한 공고. 수집 데이터에서 빠져도 계속 보이도록 내용을 함께 저장 */
+let STAR=load(LS_STAR,{});
+const SNAP=["key","notice_no","title","institution","demand_institution","notice_date","close_date","estimated_price","budget","notice_kind","url","tags","category","first_seen"];
+function setStar(key,on,n){if(on){const o={};SNAP.forEach(k=>o[k]=n[k]);o.starred_at=new Date().toISOString().slice(0,10);STAR[key]=o;}else delete STAR[key];save(LS_STAR,STAR);}
+let NEW_FROM="";
 let PAGE=1;
 let MYKW=load(LS_KW,null);
 const EMPTY_KW={include:[],exclude:[]};
@@ -303,21 +321,30 @@ const dday=c=>{if(!c)return null;return Math.floor((new Date(c.replace(" ","T"))
 const shortInst=s=>String(s||"").replace(/\s*\S*(지역본부|지방본부|지역단|본부|지사|출장소|사무소|지원단)\s*$/,"").trim()||String(s||"");
 const instOf=n=>{const i=n.institution||"";return (i.includes("조달청")&&n.demand_institution)?n.demand_institution:i;};
 
-function judge(n){const K=curKW();const t=norm(n.title);const inc=K.include.filter(k=>k&&t.includes(norm(k)));const exc=K.exclude.some(k=>k&&t.includes(norm(k)));n.matched=inc.length>0&&!exc;n.mk=[...new Set(inc.map(norm))].join(", ");n.dd=dday(n.close_date);n.isNew=n.first_seen===TODAY;n.isPre=n.notice_kind==="사전규격";}
-function judgeAll(){DATA.forEach(judge);}
+function judge(n){const K=curKW();const t=norm(n.title);const inc=K.include.filter(k=>k&&t.includes(norm(k)));const exc=K.exclude.some(k=>k&&t.includes(norm(k)));n.matched=inc.length>0&&!exc;n.mk=[...new Set(inc.map(norm))].join(", ");n.dd=dday(n.close_date);n.isToday=n.first_seen===TODAY;n.isNew=!!n.first_seen&&n.first_seen>=NEW_FROM;n.isPre=n.notice_kind==="사전규격";n.starred=!!STAR[n.key];}
+function judgeAll(){
+  NEW_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(NEW_DAYS-1)*864e5).toISOString().slice(0,10);
+  DATA.forEach(judge);
+  // 체크해 둔 사전규격이 수집 목록에서 빠졌으면 저장본으로 되살림
+  const have=new Set(DATA.map(n=>n.key));
+  for(const [k,o] of Object.entries(STAR)){if(!have.has(k)){const n=Object.assign({},o);judge(n);n.starred=true;n.orphan=true;DATA.push(n);have.add(k);}}
+  // 체크한 사전규격과 제목이 같은 입찰공고 → 관심 공고에서 함께 보여줌
+  const T=new Set(Object.values(STAR).map(o=>norm(o.title)).filter(t=>t.length>=6));
+  DATA.forEach(n=>{n.linked=!n.isPre&&!n.starred&&[...T].some(t=>{const u=norm(n.title);return u===t||u.includes(t)||t.includes(u);});});
+}
 
 function base(n){
   if(S.cat&&n.category!==S.cat)return false;
   if(S.kind==="pre"&&!n.isPre)return false;
   if(S.kind==="bid"&&n.isPre)return false;
-  if(S.open&&n.dd!==null&&n.dd<0)return false;
+  if(S.open&&n.dd!==null&&n.dd<0&&!n.starred)return false;   // 체크한 공고는 마감돼도 유지
   if(S.q){const q=norm(S.q).toLowerCase();if(!norm(n.title+" "+(n.institution||"")+" "+(n.demand_institution||"")).toLowerCase().includes(q))return false;}
   return true;
 }
 function inView(n,v){
   if(v==="all")return true;
-  if(!n.matched)return false;
-  if(v==="urgent")return n.dd!==null&&n.dd>=0&&n.dd<=7;
+  if(v==="matched")return n.starred||n.linked;      // 사전규격에서 체크한 공고(+같은 제목의 입찰공고)
+  if(!n.matched)return false;                        // 신규·사전규격은 키워드 기준
   if(v==="new")return n.isNew;
   if(v==="pre")return n.isPre;
   return true;
@@ -351,12 +378,15 @@ function rowHTML(n){
   if(n.url)title=`<a class="t" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>`;
   else if(n.isPre)title=`<a class="t" href="https://www.g2b.go.kr/" target="_blank" rel="noopener" data-copy="${esc(n.notice_no||"")}" title="클릭하면 등록번호를 복사하고 나라장터를 엽니다">${esc(n.title)}</a>`;
   else title=`<span class="t">${esc(n.title)}</span>`;
-  return `<div class="row">
-    <span class="pri ${cls}"><i></i><i></i><i></i></span>
+  const chk=n.isPre?`<label class="chk" title="관심 공고로 체크"><input type="checkbox" data-star="${esc(n.key)}" ${n.starred?"checked":""}><i></i></label>`:"";
+  return `<div class="row${n.starred?' starred':''}">
+    ${chk}<span class="pri ${cls}"><i></i><i></i><i></i></span>
     <span class="dd${d!==null&&d>=0&&d<=3?' u':''}">${ddtxt}</span>
     ${st}${title}
     <span class="right">
-      ${n.isNew?'<span class="lbl new"><span class="dot" style="background:var(--acc)"></span>NEW</span>':''}
+      ${n.isToday?'<span class="lbl new"><span class="dot" style="background:var(--acc)"></span>NEW</span>':''}
+      ${n.linked?'<span class="lbl link" title="체크한 사전규격과 같은 제목의 입찰공고">입찰공고 등록</span>':''}
+      ${n.orphan?'<span class="lbl link" title="수집 목록에서는 빠졌지만 체크해 두어 유지됨">보관</span>':''}
       ${n.isPre?'<span class="lbl pre"><span class="dot" style="background:var(--blue)"></span>사전규격</span>':''}
       ${(n.tags||"").split(",").filter(Boolean).map(t=>`<span class="lbl tag"><span class="dot" style="background:${TAGC[t]}"></span>${t}</span>`).join("")}
       ${n.mk?`<span class="lbl kw">${esc(n.mk.split(", ")[0])}</span>`:""}
@@ -374,7 +404,7 @@ function render(){
   $("count").textContent=rows.length.toLocaleString();
   const el=$("list");
   if(!rows.length){
-    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":"조건에 맞는 공고가 없습니다.")+'</div>';
+    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":"조건에 맞는 공고가 없습니다."))+'</div>';
     return;
   }
   const g=[[],[],[],[]];   // 이번 주 / 다음 주 / 이후 / 마감일 없음
@@ -411,7 +441,7 @@ function pagerHTML(pages,total,per){
     <select id="per">${[25,50,100,200].map(v=>`<option value="${v}" ${v===per?"selected":""}>${v}개씩</option>`).join("")}</select></div>`;
 }
 
-const TABICO={new:'<svg viewBox="0 0 24 24"><path d="M13 2 3 14h8l-1 8 10-12h-8z"/></svg>',urgent:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg>',matched:'<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="3"/></svg>',pre:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',all:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>'};
+const TABICO={new:'<svg viewBox="0 0 24 24"><path d="M13 2 3 14h8l-1 8 10-12h-8z"/></svg>',matched:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>',pre:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',all:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>'};
 function drawTabbar(){
   $("tabbar").innerHTML=Object.entries(VIEWS).map(([v,l])=>`<button data-view="${v}" class="${v===S.view?'on':''}">${TABICO[v]}${l}<b>${$("n-"+v).textContent}</b></button>`).join("");
 }
@@ -449,7 +479,15 @@ document.addEventListener("click",e=>{
   const a=e.target.closest("a[data-copy]");
   if(a){navigator.clipboard&&navigator.clipboard.writeText(a.dataset.copy).catch(()=>{});const c=$("count"),o=c.textContent;c.textContent="등록번호 복사됨 — 나라장터에 붙여넣기";setTimeout(()=>c.textContent=o,4000);}
 });
-document.addEventListener("change",e=>{if(e.target.id==="per"){S.per=+e.target.value;update();}});
+document.addEventListener("change",e=>{
+  if(e.target.id==="per"){S.per=+e.target.value;update();return;}
+  if(e.target.dataset.star!==undefined){
+    const key=e.target.dataset.star,n=DATA.find(x=>x.key===key);if(!n)return;
+    setStar(key,e.target.checked,n);
+    if(!e.target.checked&&n.orphan)DATA.splice(DATA.indexOf(n),1);
+    judgeAll();render();syncUI();
+  }
+});
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter"){S.q=$("q").value;update();}});
 $("q").addEventListener("search",()=>{if(!$("q").value){S.q="";update();}});
 document.addEventListener("keydown",e=>{if(e.key==="/"&&!["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)){e.preventDefault();$("q").focus();}});
