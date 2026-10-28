@@ -23,6 +23,7 @@ class Notice:
     url: str = ""                    # 상세 URL
     tags: str = ""                   # LH,GH 등 (콤마 구분)
     category: str = ""               # 공공기관/지자체/중앙정부/교육기관/기타
+    prespec_no: str = ""             # 이 입찰공고의 사전규격 등록번호 (나라장터 bfSpecRgstNo)
     matched: int = 0                 # 관심 키워드 매칭 여부
     matched_keywords: str = ""       # 매칭된 키워드
     raw: str = ""                    # 원본 JSON (디버깅용)
