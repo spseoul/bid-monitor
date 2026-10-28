@@ -142,6 +142,7 @@ class G2BCollector(BaseCollector):
             award_method=str(it.get("sucsfbidMthdNm", "")),
             notice_kind=str(it.get("ntceKindNm", "")),
             service_div=str(it.get("srvceDivNm", "")),
+            prespec_no=str(it.get("bfSpecRgstNo") or "").strip(),
             url=url,
             raw=json.dumps(it, ensure_ascii=False),
         )
