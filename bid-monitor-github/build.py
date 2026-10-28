@@ -32,7 +32,7 @@ SEEN = DOCS / "seen.json"
 DATAF = DOCS / "data.json"
 STATIC = ROOT / "bidmon" / "static"      # sw.js, manifest, 아이콘 → docs/ 로 복사
 KEEP = ["key", "notice_no", "title", "institution", "demand_institution", "notice_date", "close_date",
-        "estimated_price", "budget", "award_method", "notice_kind", "url", "tags", "category"]
+        "estimated_price", "budget", "award_method", "notice_kind", "url", "tags", "category", "prespec_no"]
 
 
 def load_previous() -> dict[str, dict]:
@@ -65,6 +65,9 @@ def main():
     if os.getenv("BIDMON_DAYS"):          # full_refresh.bat 등에서 일시적으로 수집 범위를 넓힐 때
         days = int(os.getenv("BIDMON_DAYS"))
     log.info("이전 공고 %d건, 이번 수집 범위 최근 %d일", len(prev), days)
+    # 상세(첨부 공고문) 조회를 생략할 공고: 이미 마감일을 알거나, 처음 본 지 10일이 지나 더 찾아도 없을 공고
+    _retry_from = (now_kst() - timedelta(days=10)).strftime("%Y-%m-%d")
+    known = {k for k, v in prev.items() if v.get("close_date") or (v.get("first_seen") or "") < _retry_from}
 
     collectors = [G2BCollector(cfg["g2b"])]
     if (cfg.get("g2b_prespec") or {}).get("enabled"):
@@ -72,27 +75,27 @@ def main():
     lh_cfg = cfg.get("lh") or {}
     if lh_cfg.get("enabled", True):          # config.yaml 에 lh 항목이 없어도 기본 켜짐
         lh = LHCollector(lh_cfg)
-        lh.known = set(prev)                 # 이미 페이지에 있는 공고는 상세 조회 생략
+        lh.known = known                     # 이미 페이지에 있는 공고는 상세 조회 생략
         collectors.append(lh)
     lb_cfg = cfg.get("lh_board") or {}
     if lb_cfg.get("enabled", True):          # LH 홈페이지 공모·공고 게시판 (설계공모 등)
         lb = LHBoardCollector(lb_cfg)
-        lb.known = set(prev)
+        lb.known = known
         collectors.append(lb)
     sc_cfg = cfg.get("seoul_cleanup") or {}
     if sc_cfg.get("enabled", True):          # 서울 정비사업 정보몽땅 조합입찰공고
         sc = SeoulCleanupCollector(sc_cfg)
-        sc.known = set(prev)
+        sc.known = known
         collectors.append(sc)
     bd_cfg = cfg.get("busan_dynamice") or {}
     if bd_cfg.get("enabled", True):          # 부산 정비사업 통합홈페이지 조합입찰공고
         bd = BusanDynamiceCollector(bd_cfg)
-        bd.known = set(prev)
+        bd.known = known
         collectors.append(bd)
     for C, key in ((SHBoardCollector, "sh_board"), (GHBoardCollector, "gh_board")):   # SH 현상설계 / GH 공모 게시판
         c_cfg = cfg.get(key) or {}
         if c_cfg.get("enabled", True):
-            c = C(c_cfg); c.known = set(prev); collectors.append(c)
+            c = C(c_cfg); c.known = known; collectors.append(c)
     notices = []
     for c in collectors:
         notices += c.safe_collect(days)
@@ -107,7 +110,7 @@ def main():
         categorize(n)
         d = {k: getattr(n, k) for k in KEEP}
         old = prev.get(n.key) or {}
-        for k in ("notice_date", "estimated_price", "budget", "demand_institution"):
+        for k in ("notice_date", "close_date", "estimated_price", "budget", "demand_institution", "prespec_no"):
             if not d.get(k) and old.get(k):  # 이번에 비어 있으면 이전 값 유지 (LH 상세 생략 시)
                 d[k] = old[k]
         d["first_seen"] = seen.setdefault(n.key, today)
