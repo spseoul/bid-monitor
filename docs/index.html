@@ -331,6 +331,8 @@ const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&g
 const dday=c=>{if(!c)return null;return Math.floor((new Date(c.replace(" ","T"))-NOW)/864e5);};
 /* 발주처는 본부·지사를 떼고 기관명만 */
 const shortInst=s=>String(s||"").replace(/\s*\S*(지역본부|지방본부|지역단|본부|지사|출장소|사무소|지원단)\s*$/,"").trim()||String(s||"");
+/* 사전규격 상세조회 고정 링크 (나라장터 PRVA004_02 화면) */
+const preUrl=n=>n.url||(n.notice_no?`https://www.g2b.go.kr/link/PRVA004_02/single/?bfSpecRegNo=${encodeURIComponent(n.notice_no)}`:"https://www.g2b.go.kr/");
 const instOf=n=>{const i=n.institution||"";return (i.includes("조달청")&&n.demand_institution)?n.demand_institution:i;};
 
 function judge(n){const K=curKW();const t=norm(n.title);const inc=K.include.filter(k=>k&&t.includes(norm(k)));const exc=K.exclude.some(k=>k&&t.includes(norm(k)));n.matched=inc.length>0&&!exc;n.mk=[...new Set(inc.map(norm))].join(", ");n.dd=dday(n.close_date);n.isToday=n.first_seen===TODAY;n.isNew=!!n.first_seen&&n.first_seen>=NEW_FROM;n.isPre=n.notice_kind==="사전규격";n.starred=!!STAR[n.key];}
@@ -394,8 +396,8 @@ function rowHTML(n){
   const [ch,cc]=CATC[n.category]||CATC["기타"];
   const amt=(n.estimated_price||n.budget)?`<b>${Math.round((n.estimated_price||n.budget)/1e6).toLocaleString()}</b>백만`:"";
   let title;
-  if(n.url)title=`<a class="t" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>`;
-  else if(n.isPre)title=`<a class="t" href="https://www.g2b.go.kr/" target="_blank" rel="noopener" data-copy="${esc(n.notice_no||"")}" title="클릭하면 등록번호를 복사하고 나라장터를 엽니다">${esc(n.title)}</a>`;
+  if(n.isPre)title=`<a class="t" href="${esc(preUrl(n))}" target="_blank" rel="noopener" title="나라장터 사전규격상세조회 열기">${esc(n.title)}</a>`;
+  else if(n.url)title=`<a class="t" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>`;
   else title=`<span class="t">${esc(n.title)}</span>`;
   const chk=n.isPre?`<label class="chk" title="관심 공고로 체크"><input type="checkbox" data-star="${esc(n.key)}" ${n.starred?"checked":""}><i></i></label>`:"";
   return `<div class="row${n.starred?' starred':''}">
@@ -452,7 +454,7 @@ function pairHTML(p){
     ${chk}<span class="pri lo"><i></i><i></i><i></i></span>
     <span class="dd">${d===null?"—":d<0?"대기":"D-"+d}</span>
     <span class="stg p">사전규격</span>
-    <a class="t" href="https://www.g2b.go.kr/" target="_blank" rel="noopener" data-copy="${esc(p.notice_no||"")}" title="클릭하면 등록번호를 복사하고 나라장터를 엽니다">${esc(p.title)}</a>
+    <a class="t" href="${esc(preUrl(p))}" target="_blank" rel="noopener" title="나라장터 사전규격상세조회 열기">${esc(p.title)}</a>
     <span class="right">
       <span class="av" style="background:${cc}">${ch}</span>
       <span class="inst" title="${esc(instOf(p))}">${esc(shortInst(instOf(p)))}</span>
