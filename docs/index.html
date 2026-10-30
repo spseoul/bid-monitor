@@ -461,6 +461,9 @@ const preUrl=n=>n.url||(n.notice_no?`https://www.g2b.go.kr/link/PRVA004_02/singl
 const instOf=n=>{const i=n.institution||"";return (i.includes("조달청")&&n.demand_institution)?n.demand_institution:i;};
 
 function judge(n){const K=curKW();const t=norm(n.title);const inc=K.include.filter(k=>k&&t.includes(norm(k)));const exc=K.exclude.some(k=>k&&t.includes(norm(k)));n.matched=inc.length>0&&!exc;n.mk=[...new Set(inc.map(norm))].join(", ");n.dd=dday(n.close_date);n.isToday=n.first_seen===TODAY;n.isNew=!!n.first_seen&&n.first_seen>=NEW_FROM;n.isPre=n.notice_kind==="사전규격";n.starred=!!STAR[n.key];}
+/* 사전규격은 의견등록마감이 지나도 곧 입찰공고가 나올 단계 → 공개 후 30일, 입찰공고 연결 전까지는 '진행 중'으로 취급 */
+const PRE_ALIVE_DAYS=30;
+const preAlive=n=>n.isPre&&n.dd!==null&&n.dd<0&&!n.bid&&!!n.notice_date&&(NOW-new Date(n.notice_date.replace(" ","T")))/864e5<=PRE_ALIVE_DAYS;
 function judgeAll(){
   NEW_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(NEW_DAYS-1)*864e5).toISOString().slice(0,10);
   DATA.forEach(judge);
@@ -483,7 +486,7 @@ function base(n){
   if(S.cat&&n.category!==S.cat)return false;
   if(S.kind==="pre"&&!n.isPre)return false;
   if(S.kind==="bid"&&n.isPre)return false;
-  if(S.open&&n.dd!==null&&n.dd<0&&!(n.starred&&S.view==="matched"))return false;   // 관심 공고에서는 체크한 공고를 마감돼도 유지('마감·종료' 그룹)
+  if(S.open&&n.dd!==null&&n.dd<0&&!(n.starred&&S.view==="matched")&&!preAlive(n))return false;   // 관심 공고에서는 체크한 공고를 마감돼도 유지('마감·종료' 그룹)
   if(S.q){const q=norm(S.q).toLowerCase();if(!norm(n.title+" "+(n.institution||"")+" "+(n.demand_institution||"")).toLowerCase().includes(q))return false;}
   return true;
 }
@@ -515,9 +518,9 @@ const ICO={
 
 function rowHTML(n){
   const d=n.dd;
-  const cls=d===null?"lo":d<=3?"u":d<=7?"md":"lo";
+  const cls=d===null||d<0?"lo":d<=3?"u":d<=7?"md":"lo";
   const st=n.isPre?ICO.p:(d===null?ICO.x:d<=3?ICO.u:d<=7?ICO.m:ICO.l);
-  const ddtxt=d===null?"—":d<0?"마감":"D-"+d;
+  const ddtxt=d===null?"—":d<0?(n.isPre?"대기":"마감"):"D-"+d;
   const [ch,cc]=CATC[n.category]||CATC["기타"];
   const amt=(n.estimated_price||n.budget)?`<b>${Math.round((n.estimated_price||n.budget)/1e6).toLocaleString()}</b>백만`:"";
   let title;
@@ -613,14 +616,14 @@ function render(){
     return;
   }
   if(S.view==="matched"){renderMatched(rows,el);el.scrollTop=0;return;}
-  const g=[[],[],[],[]];   // 이번 주 / 다음 주 / 이후 / 마감일 없음
+  const g=[[],[],[],[],[]];   // 이번 주 / 다음 주 / 이후 / 마감일 없음 / 사전규격 의견마감 지남(공고 대기)
   for(const n of rows){
     const d=n.dd;
-    if(d===null)g[3].push(n); else if(d<=6)g[0].push(n); else if(d<=13)g[1].push(n); else g[2].push(n);
+    if(n.isPre&&d!==null&&d<0)g[4].push(n); else if(d===null)g[3].push(n); else if(d<=6)g[0].push(n); else if(d<=13)g[1].push(n); else g[2].push(n);
   }
   const bySoon=(a,b)=>(a.dd??9e9)-(b.dd??9e9)||(b.notice_date||"").localeCompare(a.notice_date||"");
   const byNew=(a,b)=>(b.notice_date||"").localeCompare(a.notice_date||"");
-  const GR=[["u","이번 주 마감 · D-6 이내",bySoon],["m","다음 주 마감 · D-7~13",bySoon],["l","2주 뒤 마감 · D-14 이상",bySoon],["x","마감일 미정",byNew]];
+  const GR=[["u","이번 주 마감 · D-6 이내",bySoon],["m","다음 주 마감 · D-7~13",bySoon],["l","2주 뒤 마감 · D-14 이상",bySoon],["x","마감일 미정",byNew],["p","의견등록 마감됨 · 입찰공고 대기 (공개 후 30일까지 표시)",byNew]];
   const ordered=[];
   GR.forEach(([ico,label,sorter],gi)=>{g[gi].sort(sorter).forEach(n=>ordered.push([gi,n]));});
   // 페이지 나누기
