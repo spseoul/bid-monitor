@@ -335,6 +335,31 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   .pager{padding:14px 12px 20px}
 }
 
+/* 앱 레이아웃(모바일·태블릿 세로)에서 관심 공고 행: [배지 D-day ...... ☑] / 제목 / 기관·금액·마감 / 번호 */
+@media (max-width:600px), ((max-width:1024px) and (orientation:portrait) and (pointer:coarse)){
+  .row.pair.pair,.row.pair.pair:has(.chk){grid-template-columns:auto auto 1fr auto;grid-template-rows:auto auto auto auto;column-gap:6px;row-gap:4px;padding:10px 12px 9px}
+  .row.pair.pair .pri{display:none}
+  .row.pair.pair .stg{grid-row:1;grid-column:1;align-self:center}
+  .row.pair.pair .dd{grid-row:1;grid-column:2;width:auto;align-self:center;font-weight:600}
+  .row.pair.pair .chk{grid-row:1;grid-column:4;margin:0;justify-self:end}
+  .row.pair.pair .t,.row.pair.pair:has(.chk) .t{grid-row:2;grid-column:1/-1;white-space:normal;line-height:1.35}
+  .row.pair.pair .right,.row.pair.pair:has(.chk) .right{grid-row:3;grid-column:1/-1}
+  .row.pair.pair .sub{grid-row:4;grid-column:1/-1;padding:0;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .row.pair.pair .hint{display:none}
+  .row.pair.pair .lbl.new{order:-1}
+}
+/* 앱 레이아웃 일반 행: [D-day] 제목 ........ ☐ / 기관·금액·마감 (막대 숨김) */
+@media (max-width:600px), ((max-width:1024px) and (orientation:portrait) and (pointer:coarse)){
+  .row.row:not(.pair),.row.row:not(.pair):has(.chk){grid-template-columns:44px 1fr auto;grid-template-rows:auto auto;column-gap:6px;row-gap:4px;padding:10px 12px}
+  .row.row:not(.pair) .pri{display:none}
+  .row.row:not(.pair) .dd{grid-row:1;grid-column:1;width:auto;font-weight:600;align-self:start;padding-top:2px}
+  .row.row:not(.pair) .t{grid-row:1;grid-column:2;white-space:normal;line-height:1.35}
+  .row.row:not(.pair) .chk{grid-row:1;grid-column:3;margin:0;align-self:start}
+  .row.row:not(.pair) .right{grid-row:2;grid-column:2/-1}
+}
+@media (max-width:600px), ((max-width:1024px) and (orientation:portrait) and (pointer:coarse)){
+  main[data-view="pre"] .lbl.pre{display:none}   /* 사전규격 화면에서는 '사전규격' 꼬리표 중복이라 숨김 */
+}
 </style>
 </head>
 <body>
@@ -458,7 +483,7 @@ function base(n){
   if(S.cat&&n.category!==S.cat)return false;
   if(S.kind==="pre"&&!n.isPre)return false;
   if(S.kind==="bid"&&n.isPre)return false;
-  if(S.open&&n.dd!==null&&n.dd<0&&!n.starred)return false;   // 체크한 공고는 마감돼도 유지
+  if(S.open&&n.dd!==null&&n.dd<0&&!(n.starred&&S.view==="matched"))return false;   // 관심 공고에서는 체크한 공고를 마감돼도 유지('마감·종료' 그룹)
   if(S.q){const q=norm(S.q).toLowerCase();if(!norm(n.title+" "+(n.institution||"")+" "+(n.demand_institution||"")).toLowerCase().includes(q))return false;}
   return true;
 }
@@ -546,7 +571,7 @@ function pairHTML(p){
         <span class="amt"><b>${money(b)}</b></span>
         <span class="date">${b.close_date?b.close_date.slice(5,10):""}</span>
       </span>
-      <span class="sub">사전규격 ${esc(p.notice_no)} · ${p.notice_date?p.notice_date.slice(0,10):""} 등록 → 입찰공고 ${esc(b.notice_no)} · ${b.notice_date?b.notice_date.slice(0,10):""} 게시${b.award_method?" · "+esc(b.award_method.split("-")[0]):""}</span>
+      <span class="sub">사전규격 ${esc(p.notice_no)} · ${p.notice_date?p.notice_date.slice(5,10):""} 등록 → 입찰공고 ${esc(b.notice_no)} · ${b.notice_date?b.notice_date.slice(5,10):""} 게시<span class="hint">${b.award_method?" · "+esc(b.award_method.split("-")[0]):""}</span></span>
     </div>`;
   }
   const d=p.dd,wait=d===null?"":d<0?`의견마감 ${-d}일 경과`:`의견마감 D-${d}`;
@@ -561,7 +586,7 @@ function pairHTML(p){
       <span class="amt"><b>${money(p)}</b></span>
       <span class="date">${p.close_date?p.close_date.slice(5,10):""}</span>
     </span>
-    <span class="sub">${esc(p.notice_no)} · ${p.notice_date?p.notice_date.slice(0,10):""} 등록 · ${wait} · 정식 입찰공고가 올라오면 자동으로 여기 표시됩니다</span>
+    <span class="sub">${esc(p.notice_no)} · ${p.notice_date?p.notice_date.slice(5,10):""} 등록 · ${wait}<span class="hint"> · 정식 입찰공고가 올라오면 자동으로 여기 표시됩니다</span></span>
   </div>`;
 }
 function renderMatched(rows,el){
@@ -629,6 +654,7 @@ function drawTabbar(){
 function syncUI(){
   drawTabbar();
   $("btnSum").style.display=S.view==="matched"?"":"none";
+  document.querySelector("main").dataset.view=S.view;
   document.querySelectorAll("#nav [data-view]").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));
   document.querySelectorAll("#nav [data-tag]").forEach(b=>b.classList.toggle("on",b.dataset.tag===S.tag));
   document.querySelectorAll(".bar [data-cat]").forEach(b=>b.classList.toggle("on",b.dataset.cat===S.cat));
