@@ -115,7 +115,7 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 .inst{color:var(--ink2);font-size:12px;width:158px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-align:right;flex:none}
 .amt{color:var(--ink3);font-size:12px;width:62px;text-align:right;flex:none;font-variant-numeric:tabular-nums;white-space:nowrap}
 .amt b{color:var(--ink2);font-weight:500}
-.date{color:var(--ink3);font-size:12px;width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums}
+.date{color:var(--ink3);font-size:12px;width:38px;text-align:right;flex:none;font-variant-numeric:tabular-nums;white-space:nowrap}
 .empty{padding:56px 20px;text-align:center;color:var(--ink3)}
 .pager{display:flex;align-items:center;justify-content:center;gap:4px;padding:16px 14px 28px;border-top:1px solid var(--line2);font-size:12.5px;color:var(--ink3);flex-wrap:wrap}
 .pager button{min-width:30px;height:30px;padding:0 8px;border-radius:6px;border:1px solid transparent;color:var(--ink2)}
@@ -130,6 +130,98 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 
 /* ── 키워드 패널 ── */
 #panel{display:none;border-bottom:1px solid var(--line);background:var(--grp);flex:none}
+.row{cursor:pointer}
+/* ── 상세 패널 (오른쪽 서랍) ── */
+#dim{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:60;display:none}
+#dim.open{display:block}
+#dtl{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel,var(--bg));border-left:1px solid var(--line);z-index:61;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .18s ease;box-shadow:-12px 0 40px rgba(0,0,0,.12)}
+#dtl.open{transform:none}
+#dtl .hd{padding:16px 18px 12px;border-bottom:1px solid var(--line2);display:flex;gap:10px;align-items:flex-start}
+#dtl .hd .ttl{font-size:15px;font-weight:600;line-height:1.4;flex:1;word-break:keep-all}
+#dtl .hd .x{border:0;background:none;font-size:20px;color:var(--ink3);cursor:pointer;line-height:1;padding:2px 4px}
+#dtl .bd{overflow:auto;padding:4px 18px 18px;flex:1}
+#dtl h4{font-size:11.5px;color:var(--ink3);font-weight:600;letter-spacing:.04em;margin:18px 0 6px}
+#dtl .kv{display:grid;grid-template-columns:112px 1fr;border:1px solid var(--line2);border-radius:8px;overflow:hidden;font-size:13px}
+#dtl .kv>span{padding:8px 11px;border-bottom:1px solid var(--line2);line-height:1.45}
+#dtl .kv>span:nth-last-child(-n+2){border-bottom:0}
+#dtl .kv>span:nth-child(odd){background:var(--grp);color:var(--ink3);font-size:12px}
+#dtl .kv b{font-weight:600}
+#dtl .kv .hi{color:var(--ink);font-weight:600}
+#dtl .kv .warn{color:var(--red);font-weight:600}
+#dtl .acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+#dtl .acts .btn{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 12px;cursor:pointer;color:var(--ink)}
+#dtl .acts .btn.primary{background:var(--acc);border-color:var(--acc);color:#fff}
+#dtl .acts .btn svg{width:14px;height:14px}
+/* ── 관심 공고 요약표 (전체 화면) ── */
+#sum{position:fixed;inset:0;background:var(--panel);z-index:70;display:none;flex-direction:column}
+#sum.open{display:flex}
+#sum .hd{display:flex;align-items:center;gap:10px;padding:14px 22px;border-bottom:1px solid var(--line);flex:none}
+#sum .hd h2{font-size:16px;font-weight:600;margin:0}
+#sum .hd .cnt{color:var(--ink3);font-size:13px}
+#sum .hd .r{margin-left:auto;display:flex;gap:8px;align-items:center}
+#sum .hd .btn{display:inline-flex;align-items:center;gap:6px;height:30px;padding:0 11px;cursor:pointer;color:var(--ink)}
+#sum .hd .btn svg{width:14px;height:14px}
+#sum .hd .x{border:0;background:none;font-size:22px;color:var(--ink3);cursor:pointer;line-height:1;padding:0 4px}
+#sum .bd{overflow:auto;padding:14px 22px 30px;flex:1}
+table.sum{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+table.sum th{position:sticky;top:0;background:var(--grp);color:var(--ink3);font-weight:600;font-size:12px;text-align:left;padding:9px 10px;border-bottom:1px solid var(--line);white-space:nowrap}
+table.sum td{padding:9px 10px;border-bottom:1px solid var(--line2);vertical-align:middle;line-height:1.4}
+table.sum tr:hover td{background:var(--hov)}
+table.sum td.n{text-align:right;font-variant-numeric:tabular-nums;white-space:nowrap}
+table.sum th.n{text-align:right}
+table.sum th.c-inst{width:150px}table.sum th.c-amt{width:100px}table.sum th.c-dt{width:130px}table.sum th.c-dt2{width:170px}
+table.sum td.d{white-space:nowrap;font-variant-numeric:tabular-nums}
+table.sum td.nm{font-weight:500;cursor:pointer}
+table.sum td.nm:hover{text-decoration:underline}
+table.sum td.nm .stg{margin-right:6px;vertical-align:1px}
+table.sum .dd{color:var(--ink3);font-size:11.5px;margin-left:5px}
+table.sum .dd.u{color:var(--red);font-weight:600}
+table.sum tr.sg td{background:var(--grp);color:var(--ink2);font-weight:600;font-size:12px;padding:6px 10px}
+table.sum tr.done td{opacity:.55}
+#sum .empty{padding:60px 0;text-align:center;color:var(--ink3)}
+@media (max-width:600px){
+  #sum .bd{padding:8px 10px 30px}
+  table.sum{font-size:12px}
+  table.sum th,table.sum td{padding:7px 6px}
+  table.sum .hide-m{display:none}
+  /* 모바일: 표 대신 카드 */
+  table.sum,table.sum tbody,table.sum tr,table.sum td{display:block}
+  table.sum thead{display:none}
+  table.sum tr{border:1px solid var(--line2);border-radius:10px;padding:10px 12px;margin:8px 0}
+  table.sum tr.sg{border:0;padding:12px 2px 2px;margin:0}
+  table.sum td{padding:0;border:0;text-align:left!important;white-space:normal!important}
+  table.sum td.nm{font-size:13.5px;line-height:1.4;margin-bottom:6px}
+  table.sum td.nm .stg{margin-right:6px}
+  table.sum td.inst,table.sum td.n,table.sum td.d{display:inline;font-size:12px;color:var(--ink2)}
+  table.sum td.n::before,table.sum td.d::before{content:attr(data-l);color:var(--ink3);margin:0 3px 0 10px}
+  table.sum td.hide-m{display:none}
+  table.sum .dd{margin-left:4px}
+  #sum .hd{padding:12px 14px}#sum .hd .btn{padding:0 9px}
+}
+@media print{
+  body>*:not(#sum){display:none!important}
+  #sum{position:static;display:flex!important}
+  #sum .hd .r{display:none}
+  table.sum th{position:static}
+}
+/* 타임라인 (사전규격 → 입찰공고) */
+.tl{display:grid;grid-template-columns:auto 1fr;gap:0 12px;font-size:12.5px;margin-top:4px}
+.tl .d{width:13px;height:13px;border-radius:50%;border:2px solid var(--line);background:var(--bg);margin:3px 0 0 2px;position:relative}
+.tl .d.on{border-color:var(--green);background:var(--green)}
+.tl .d.now{border-color:var(--acc);background:var(--acc);box-shadow:0 0 0 4px color-mix(in srgb,var(--acc) 22%,transparent)}
+.tl .d.pend{border-style:dashed}
+.tl .ln{width:2px;background:var(--line2);margin:0 0 0 7.5px;min-height:18px}
+.tl .ln.on{background:var(--green)}
+.tl .tt{padding:0 0 14px;line-height:1.4}
+.tl .tt small{display:block;color:var(--ink3);font-size:11.5px}
+.tl .tt a{color:var(--acc);text-decoration:none;font-size:11.5px;margin-left:6px}
+.tl .tt a:hover{text-decoration:underline}
+#dtl .stg{font-size:10.5px;margin-top:3px}
+@media (max-width:600px){
+  #dtl{top:auto;height:88%;width:100%;border-left:0;border-top:1px solid var(--line);border-radius:16px 16px 0 0;transform:translateY(100%)}
+  #dtl.open{transform:none}
+  #dtl .kv{grid-template-columns:96px 1fr}
+}
 #panel.open{display:block}
 #panel.admin{background:color-mix(in srgb,var(--amber) 9%,var(--panel))}
 .pin{padding:12px 14px;display:grid;grid-template-columns:1fr 1fr;gap:14px}
@@ -145,6 +237,8 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;border:1px solid var(--line);border-radius:7px;padding:8px 10px;resize:vertical;background:var(--fld);color:var(--ink)}
 .act{grid-column:1/-1;display:flex;gap:7px;align-items:center;flex-wrap:wrap}
 .btn{border:1px solid var(--line);border-radius:7px;padding:5px 11px;font-size:12.5px;background:var(--fld)}
+.btn.xls{display:inline-flex;align-items:center;gap:5px;height:28px;padding:0 10px;color:var(--ink2);white-space:nowrap}
+.btn.xls svg{width:14px;height:14px}.btn.xls:hover{color:var(--green);border-color:var(--green)}
 .btn:hover{background:var(--hov)}
 .btn.p{background:var(--acc);border-color:var(--acc);color:#fff;font-weight:500}
 .msg{font-size:12.5px;color:var(--green)}.msg.err{color:var(--red)}
@@ -194,6 +288,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   .bar{padding:0 12px 8px;gap:6px}
   .fld input{width:100%}
   .fld{flex:1}
+  .btn.xls span{display:none}.btn.xls{padding:0 8px}
   select{padding-right:22px;height:30px}
   .mnav{display:flex;gap:5px;overflow-x:auto;padding:0 12px 10px;scrollbar-width:none;flex:none}
   .mnav::-webkit-scrollbar{display:none}
@@ -285,6 +380,8 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
     <span class="r">
       <select id="kind"><option value="">종류: 전체</option><option value="bid">입찰공고</option><option value="pre">사전규격</option></select>
       <select id="open"><option value="1">진행 중</option><option value="">마감 포함</option></select>
+      <button class="btn xls" id="btnSum" title="체크한 공고를 한 표로"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M3 15h18M9 4v16"/></svg><span>요약표</span></button>
+      <button class="btn xls" id="btnXls" title="현재 목록을 엑셀로 저장"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg><span>엑셀</span></button>
       <label class="fld"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input id="q" type="search" placeholder="공고명, 발주처"><span class="kbd">/</span></label>
     </span>
   </div>
@@ -298,6 +395,9 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   </div></div>
   <div class="list" id="list"></div>
 </main>
+<div id="dim"></div>
+<section id="sum" aria-hidden="true"><div class="hd"><h2>관심 공고 요약표</h2><span class="cnt" id="sumCnt"></span><span class="r"><button class="btn" id="sumPrint"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9V3h12v6M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="7"/></svg>인쇄</button><button class="btn" id="sumXls"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 3v12m0 0 4-4m-4 4-4-4"/><path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/></svg>엑셀</button><button class="x" id="sumClose" title="닫기">×</button></span></div><div class="bd" id="sumBody"></div></section>
+<aside id="dtl" aria-hidden="true"><div class="hd"><div class="ttl" id="dTitle"></div><button class="x" id="dClose" title="닫기">×</button></div><div class="bd" id="dBody"></div></aside>
 <nav class="tabbar" id="tabbar"></nav>
 
 <script>
@@ -400,7 +500,7 @@ function rowHTML(n){
   else if(n.url)title=`<a class="t" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>`;
   else title=`<span class="t">${esc(n.title)}</span>`;
   const chk=n.isPre?`<label class="chk" title="관심 공고로 체크"><input type="checkbox" data-star="${esc(n.key)}" ${n.starred?"checked":""}><i></i></label>`:"";
-  return `<div class="row${n.starred?' starred':''}">
+  return `<div class="row${n.starred?' starred':''}" data-key="${esc(n.key)}">
     ${chk}<span class="pri ${cls}"><i></i><i></i><i></i></span>
     <span class="dd${d!==null&&d>=0&&d<=3?' u':''}">${ddtxt}</span>
     ${st}${title}
@@ -433,7 +533,7 @@ function pairHTML(p){
   if(b){
     const d=b.dd,ddtxt=d===null?"—":d<0?"마감":"D-"+d,cls=d===null?"lo":d<=3?"u":d<=7?"md":"lo";
     const fresh=b.first_seen&&b.first_seen>=NEW_FROM;
-    return `<div class="row pair st${st}">
+    return `<div class="row pair st${st}" data-key="${esc(p.key)}">
       ${chk}<span class="pri ${cls}"><i></i><i></i><i></i></span>
       <span class="dd${d!==null&&d>=0&&d<=3?' u':''}">${ddtxt}</span>
       <span class="stg b">입찰공고</span>
@@ -450,7 +550,7 @@ function pairHTML(p){
     </div>`;
   }
   const d=p.dd,wait=d===null?"":d<0?`의견마감 ${-d}일 경과`:`의견마감 D-${d}`;
-  return `<div class="row pair st${st}">
+  return `<div class="row pair st${st}" data-key="${esc(p.key)}">
     ${chk}<span class="pri lo"><i></i><i></i><i></i></span>
     <span class="dd">${d===null?"—":d<0?"대기":"D-"+d}</span>
     <span class="stg p">사전규격</span>
@@ -528,6 +628,7 @@ function drawTabbar(){
 }
 function syncUI(){
   drawTabbar();
+  $("btnSum").style.display=S.view==="matched"?"":"none";
   document.querySelectorAll("#nav [data-view]").forEach(b=>b.classList.toggle("on",b.dataset.view===S.view));
   document.querySelectorAll("#nav [data-tag]").forEach(b=>b.classList.toggle("on",b.dataset.tag===S.tag));
   document.querySelectorAll(".bar [data-cat]").forEach(b=>b.classList.toggle("on",b.dataset.cat===S.cat));
@@ -549,7 +650,153 @@ function syncSrc(){
 }
 function update(){PAGE=1;save(LS_S,S);render();syncUI();}
 
+/* ── 상세 패널 ── */
+const fmtWon=v=>v==null||v===""?"—":Number(v).toLocaleString()+" 원";
+const fmtDt=v=>v?v.replace(" ","  "):"—";
+const ddTxt=n=>n.dd==null?"":n.dd<0?` (마감 ${-n.dd}일 경과)`:n.dd===0?" (오늘 마감)":` (D-${n.dd})`;
+const svgOut='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg>';
+const svgCopy='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="9" y="9" width="11" height="11" rx="2"/><path d="M5 15V5a1 1 0 0 1 1-1h10"/></svg>';
+function kv(pairs){return '<div class="kv">'+pairs.filter(p=>p).map(([k,v])=>`<span>${k}</span><span>${v==null||v===""?"—":v}</span>`).join("")+'</div>';}
+function infoOf(n,label){
+  const dd=n.dd;const close=n.close_date?`<span class="${dd!=null&&dd>=0&&dd<=3?'warn':'hi'}">${fmtDt(n.close_date)}${ddTxt(n)}</span>`:"";
+  return kv([
+    [n.isPre?"사전규격번호":"공고번호",`<b>${esc(n.notice_no||"")}</b>${n.ord&&n.ord!=="00"&&n.ord!=="000"?" · "+esc(n.ord)+"차":""}`],
+    ["구분",n.isPre?"사전규격":(n.notice_kind||"입찰공고")],
+    n.service_div?["업무구분",esc(n.service_div)]:null,
+    [n.isPre?"사전규격명":"공고명",esc(n.title)],
+    ["수요기관",esc(instOf(n))],
+    n.institution&&n.institution!==instOf(n)?["공고기관",esc(n.institution)]:null,
+    ["분류",esc(n.category||"")+((n.tags||"")?" · "+esc(n.tags):"")],
+    ["배정예산",`<b>${fmtWon(n.budget)}</b>`],
+    n.estimated_price?["추정가격",fmtWon(n.estimated_price)]:null,
+    n.award_method?["낙찰방법",esc(n.award_method)]:null,
+    [n.isPre?"공개일시":"공고일시",fmtDt(n.notice_date)],
+    [n.isPre?"의견등록마감":"입찰마감일시",close],
+    n.mk?["일치 키워드",esc(n.mk)]:null,
+    ["처음 수집",n.first_seen||"—"],
+  ]);
+}
+function timeline(p,b){
+  const steps=[
+    ["사전규격 공개",p.notice_date,true,p.notice_no,preUrl(p)],
+    ["의견등록 마감",p.close_date,!!(p.close_date&&p.dd!=null&&p.dd<0),null,null],
+    ["입찰공고 게시",b?b.notice_date:"",!!b,b?b.notice_no:null,b?b.url:null],
+    ["입찰 마감",b?b.close_date:"",!!(b&&b.dd!=null&&b.dd<0),null,null],
+  ];
+  const nowIdx=steps.findIndex(s=>!s[2]);
+  return '<div class="tl">'+steps.map((s,i)=>{
+    const cls=s[2]?"on":(i===nowIdx?"now":"pend");
+    const txt=s[1]?fmtDt(s[1]):(i===2?"아직 올라오지 않음 — 올라오면 자동 연결":"—");
+    return `<div><div class="d ${cls}"></div>${i<3?`<div class="ln ${s[2]&&steps[i+1][2]?'on':''}"></div>`:""}</div><div class="tt"><b>${s[0]}</b>${s[3]?`<a href="${esc(s[4])}" target="_blank" rel="noopener">${esc(s[3])} ↗</a>`:""}<small>${txt}</small></div>`;}).join("")+'</div>';
+}
+function openDetail(key){
+  const n=DATA.find(x=>x.key===key);if(!n)return;
+  const pre=n.isPre?n:(n.pre||null), bid=n.isPre?(n.bid||null):n;
+  const main=bid||pre;
+  $("dTitle").innerHTML=`${pre&&bid?'<span class="stg b">입찰공고 등록됨</span> ':n.isPre?'<span class="stg p">사전규격</span> ':''}<div>${esc(main.title)}</div>`;
+  let h="";
+  if(pre&&(pre.starred||bid)){h+="<h4>진행 단계</h4>"+timeline(pre,bid);}
+  if(bid){h+="<h4>입찰공고</h4>"+infoOf(bid);}
+  if(pre){h+=`<h4>사전규격${bid?" (원 사전규격)":""}</h4>`+infoOf(pre);}
+  const url=bid?bid.url:preUrl(pre);
+  h+=`<div class="acts">
+    <a class="btn primary" href="${esc(url)}" target="_blank" rel="noopener">${svgOut}나라장터에서 열기</a>
+    ${pre&&bid?`<a class="btn" href="${esc(preUrl(pre))}" target="_blank" rel="noopener">${svgOut}사전규격 보기</a>`:""}
+    <button class="btn" data-copyno="${esc(main.notice_no||"")}">${svgCopy}번호 복사</button>
+    ${pre?`<button class="btn" data-starkey="${esc(pre.key)}">${pre.starred?"☆ 관심 해제":"★ 관심 공고로"}</button>`:""}
+  </div>`;
+  $("dBody").innerHTML=h;$("dBody").scrollTop=0;
+  $("dtl").classList.add("open");$("dim").classList.add("open");$("dtl").setAttribute("aria-hidden","false");
+}
+function closeDetail(){$("dtl").classList.remove("open");$("dim").classList.remove("open");$("dtl").setAttribute("aria-hidden","true");}
+$("dClose").onclick=closeDetail;$("dim").onclick=closeDetail;
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
+$("dBody").addEventListener("click",e=>{
+  const c=e.target.closest("[data-copyno]");if(c){navigator.clipboard&&navigator.clipboard.writeText(c.dataset.copyno).catch(()=>{});c.innerHTML=svgCopy+"복사됨";return;}
+  const st=e.target.closest("[data-starkey]");if(st){const p=DATA.find(x=>x.key===st.dataset.starkey);if(!p)return;setStar(p.key,!p.starred,p);if(p.starred&&p.orphan)DATA.splice(DATA.indexOf(p),1);judgeAll();render();syncUI();openDetail(p.key);}
+});
+
+/* ── 관심 공고 요약표 ── */
+const mWon=v=>v==null||v===""?"—":Math.round(Number(v)/1e4).toLocaleString()+"만";
+function openSummary(){
+  const pres=DATA.filter(n=>n.isPre&&n.starred);
+  const el=$("sumBody");$("sumCnt").textContent=pres.length+"건";
+  if(!pres.length){el.innerHTML='<div class="empty">[사전규격]에서 체크한 공고가 없습니다.</div>';}
+  else{
+    const g=[[],[],[],[]];pres.forEach(p=>g[stageOf(p)].push(p));
+    const key=p=>((p.bid||p).dd??9e9);g.forEach(x=>x.sort((a,b)=>key(a)-key(b)));
+    let rows="";
+    STG.forEach(([ico,label],gi)=>{
+      if(!g[gi].length)return;
+      rows+=`<tr class="sg"><td colspan="6">${label}<span style="color:var(--ink3);font-weight:400;margin-left:6px">${g[gi].length}</span></td></tr>`;
+      g[gi].forEach(p=>{const n=p.bid||p,d=n.dd;
+        const dd=d==null?"":`<span class="dd${d>=0&&d<=3?' u':''}">${d<0?"마감":"D-"+d}</span>`;
+        rows+=`<tr class="${gi===3?'done':''}" data-key="${esc(p.key)}">
+          <td class="nm"><span class="stg ${p.bid?'b':'p'}">${p.bid?'입찰공고':'사전규격'}</span>${esc(n.title)}</td>
+          <td class="inst">${esc(shortInst(instOf(n)))}</td>
+          <td class="n" data-l="예산">${mWon(n.budget)}</td>
+          <td class="n hide-m" data-l="추정">${mWon(n.estimated_price)}</td>
+          <td class="d hide-m" data-l="공고">${n.notice_date?n.notice_date.slice(0,16):"—"}</td>
+          <td class="d" data-l="마감">${n.close_date?n.close_date.slice(0,16):"—"}${dd}</td></tr>`;});
+    });
+    el.innerHTML=`<table class="sum">
+      <thead><tr><th class="c-nm">공고명</th><th class="c-inst">수요기관</th><th class="n c-amt">배정예산</th><th class="n c-amt hide-m">추정가격</th><th class="c-dt hide-m">공고일시</th><th class="c-dt2">마감일시</th></tr></thead><tbody>${rows}</tbody></table>
+      <div style="color:var(--ink3);font-size:11.5px;margin-top:10px">금액 단위: 만원 · 입찰공고가 등록된 건은 입찰공고 기준, 아니면 사전규격 기준(마감 = 의견등록마감) · 공고명을 누르면 상세</div>`;
+  }
+  $("sum").classList.add("open");$("sum").setAttribute("aria-hidden","false");
+}
+function closeSummary(){$("sum").classList.remove("open");$("sum").setAttribute("aria-hidden","true");}
+$("btnSum").onclick=openSummary;$("sumClose").onclick=closeSummary;$("sumPrint").onclick=()=>window.print();
+$("sumXls").onclick=()=>{const v=S.view;S.view="matched";exportXlsx().finally(()=>{S.view=v;});};
+$("sumBody").addEventListener("click",e=>{const tr=e.target.closest("tr[data-key]");if(tr&&e.target.closest("td.nm"))openDetail(tr.dataset.key);});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeSummary();});
+
+/* ── 엑셀 내보내기: 현재 화면의 목록 (관심 공고는 사전규격+입찰공고 짝으로) ── */
+const won=v=>v==null||v===""?"":Number(v);
+function exportRows(){
+  const rows=DATA.filter(n=>base(n)&&inView(n,S.view)&&hasTag(n,S.tag));
+  const bidUrl=n=>n.url||"";
+  if(S.view==="matched"){
+    const H=["단계","사전규격명 / 공고명","업무구분","수요기관","공고기관","배정예산(원)","추정가격(원)","사전규격번호","사전규격 공개일시","의견등록마감","입찰공고번호","입찰공고일시","입찰마감일시","낙찰방법","체크한 날","사전규격 링크","입찰공고 링크"];
+    const out=rows.sort((a,b)=>stageOf(a)-stageOf(b)).map(p=>{const b=p.bid,st=STG[stageOf(p)][1].split(" — ")[0];return[
+      st,(b||p).title,(b||p).service_div||"",instOf(b||p),(b||p).institution||"",won((b||p).budget),won((b||p).estimated_price),
+      p.notice_no,p.notice_date||"",p.close_date||"",
+      b?b.notice_no:"",b?b.notice_date:"",b?b.close_date:"",b?(b.award_method||""):"",
+      (STAR[p.key]||{}).starred_at||"",preUrl(p),b?bidUrl(b):""];});
+    return {H,out,name:"관심공고"};
+  }
+  const H=["구분","공고명","업무구분","수요기관","공고기관","분류","기관태그","배정예산(원)","추정가격(원)","공고번호","공고일시","마감일시","D-day","낙찰방법","공고종류","일치 키워드","처음 수집","링크"];
+  const out=rows.map(n=>[n.isPre?"사전규격":"입찰공고",n.title,n.service_div||"",instOf(n),n.institution||"",n.category||"",n.tags||"",won(n.budget),won(n.estimated_price),
+    n.notice_no,n.notice_date||"",n.close_date||"",n.dd==null?"":n.dd,n.award_method||"",n.notice_kind||"",n.mk||"",n.first_seen||"",n.isPre?preUrl(n):bidUrl(n)]);
+  return {H,out,name:VIEWS[S.view]};
+}
+async function exportXlsx(){
+  const {H,out,name}=exportRows();
+  if(!out.length){alert("내보낼 공고가 없습니다.");return;}
+  const fname=`입찰공고_${name}_${TODAY}`;
+  try{
+    if(!window.XLSX){await new Promise((ok,no)=>{const sc=document.createElement("script");sc.src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js";sc.onload=ok;sc.onerror=no;document.head.appendChild(sc);});}
+    const ws=XLSX.utils.aoa_to_sheet([H,...out]);
+    ws["!cols"]=H.map((h,i)=>({wch:i===1?60:/링크/.test(h)?14:/기관/.test(h)?22:14}));
+    const range=XLSX.utils.decode_range(ws["!ref"]);
+    for(let r=1;r<=range.e.r;r++)for(let c=0;c<=range.e.c;c++){const cell=ws[XLSX.utils.encode_cell({r,c})];if(!cell)continue;
+      if(/링크/.test(H[c])&&cell.v){cell.l={Target:cell.v};cell.v="열기";}
+      if(/\(원\)/.test(H[c])&&typeof cell.v==="number")cell.z="#,##0";}
+    ws["!autofilter"]={ref:ws["!ref"]};ws["!freeze"]={xSplit:0,ySplit:1};
+    const wb=XLSX.utils.book_new();XLSX.utils.book_append_sheet(wb,ws,name.slice(0,30));
+    XLSX.writeFile(wb,fname+".xlsx");
+  }catch(e){ // 라이브러리를 못 받으면 CSV (엑셀에서 바로 열림)
+    const csv="\ufeff"+[H,...out].map(r=>r.map(v=>`"${String(v??"").replace(/"/g,'""')}"`).join(",")).join("\r\n");
+    const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8"}));a.download=fname+".csv";a.click();
+  }
+}
+$("btnXls").onclick=exportXlsx;
+
 document.addEventListener("click",e=>{
+  const row=e.target.closest(".row[data-key]");
+  const isApp=getComputedStyle($("tabbar")).display!=="none";
+  // PC: 제목 클릭 = 나라장터, 행의 나머지 = 상세 패널 / 앱(모바일·태블릿): 제목도 상세 패널 (나라장터는 패널 안 버튼으로)
+  if(row&&(!e.target.closest("a,label,input,button")||(isApp&&e.target.closest("a.t")))){e.preventDefault();openDetail(row.dataset.key);return;}
   const b=e.target.closest("button");
   if(b&&b.dataset.page!==undefined){PAGE=+b.dataset.page;render();return;}
   if(b&&b.dataset.src!==undefined){S.src=b.dataset.src;save(LS_S,S);fillKw();judgeAll();update();return;}
