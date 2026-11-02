@@ -49,12 +49,20 @@ def dept_keys():
     return d, priv
 
 
+PREV_ACCESS: dict = {}
+
+
 def load_previous() -> dict[str, dict]:
     """이전 data.json (없으면 옛 index.html 안의 DATA) 을 key→row 로 복원. 잠긴(암호화) 파일이면 ACCESS_PASSWORDS 로 품"""
     if DATAF.exists():
         try:
             obj = json.loads(DATAF.read_text(encoding="utf-8"))
             if secure.is_encrypted(obj):
+                PREV_ACCESS.update(obj.get("access") or {})
+                try:                                           # meta.json 쪽이 더 최신일 수 있음 (관리자 화면의 즉시 적용)
+                    PREV_ACCESS.update((json.loads(META.read_text(encoding="utf-8")) if META.exists() else {}).get("access") or {})
+                except Exception:
+                    pass
                 depts, _ = dept_keys()
                 if not depts:
                     log.error("이전 data.json 이 잠겨 있는데 부서 키(.env ACCESS_PASSWORDS / ACCESS_PRIVATE_KEY)가 없어 풀 수 없습니다 → 전체 재수집으로 진행")
@@ -184,7 +192,13 @@ def main():
         payload = {"data": data, **{k: meta[k] for k in secret_keys}}
         # 부서 상태(관심 공고·부서 키워드)를 저장소 docs/state/<부서>.json 에 쓰기 위한 토큰도 부서 비밀번호로 감싸 둠
         tok = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
-        access, blob = secure.encrypt(payload, depts, {"tok": tok})
+        state_key = secure.state_key_from_previous(PREV_ACCESS, priv)
+        if not state_key:
+            import secrets as _s
+            state_key = _s.token_bytes(32)
+            if PREV_ACCESS.get("keys"):
+                log.warning("이전 부서 상태 키를 복원하지 못해 새로 만듭니다 (ACCESS_PRIVATE_KEY 확인) — 부서 관심공고·키워드가 초기화될 수 있음")
+        access, blob = secure.encrypt(payload, depts, {"tok": tok}, state_key=state_key, priv=priv)
         if not tok:
             log.warning("GITHUB_TOKEN 이 없어 부서별 관심 공고·키워드 공유 저장은 꺼집니다 (기기별 저장만 동작)")
         meta = {k: v for k, v in meta.items() if k not in secret_keys}
