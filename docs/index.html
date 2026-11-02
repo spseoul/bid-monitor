@@ -984,6 +984,56 @@ async function sealKek(pw){
   const enc=await crypto.subtle.encrypt({name:"RSA-OAEP"},pub,kek);
   return {salt:b64e(salt),kek_enc:b64e(enc),updated:new Date().toISOString().slice(0,10)};
 }
+/* 즉시 적용: 관리자 브라우저가 가진 데이터 열쇠를 새 부서 비밀번호로 감싸 meta.json 에 바로 반영 (수집을 기다리지 않음) */
+async function wrapWith(pw,salt,rawDk,tok){
+  const kekRaw=await deriveKey(pw,salt,200000);
+  const kek=await crypto.subtle.importKey("raw",kekRaw,"AES-GCM",false,["encrypt"]);
+  const iv=crypto.getRandomValues(new Uint8Array(12));
+  const out={salt:b64e(salt),iv:b64e(iv),ct:b64e(await crypto.subtle.encrypt({name:"AES-GCM",iv},kek,rawDk))};
+  if(tok){const tiv=crypto.getRandomValues(new Uint8Array(12));out.tok={iv:b64e(tiv),ct:b64e(await crypto.subtle.encrypt({name:"AES-GCM",iv:tiv},kek,new TextEncoder().encode(tok)))};}
+  return out;
+}
+async function putDocsFile(path,contentStr,msg){
+  const H={Authorization:"Bearer "+mgrTok(),Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"};
+  const url=`https://api.github.com/repos/${GH_REPO}/contents/docs/${path}`;
+  for(let i=0;i<3;i++){
+    const cur=await fetch(url+"?ref=main&t="+Date.now(),{headers:H,cache:"no-store"});const sha=cur.ok?(await cur.json()).sha:undefined;
+    const put=await fetch(url,{method:"PUT",headers:{...H,"Content-Type":"application/json"},body:JSON.stringify({message:msg,content:b64utf(contentStr),sha,branch:"main"})});
+    if(put.ok)return;if(put.status!==409)throw new Error(path+" 저장 실패 "+put.status);await new Promise(r=>setTimeout(r,600));
+  }
+  throw new Error(path+" 저장 실패(충돌)");
+}
+async function applyAccessNow(change){   // change: {add:{dept,pw}} | {del:dept}
+  const t=toast("즉시 적용 중…",0);
+  try{
+    const m=META_OBJ||{};const tok=(ACCESS&&ACCESS.tok)||TOKEN||"";
+    let rawDk, keys, extra={};
+    if(M_LOCKED&&ACCESS){ rawDk=await crypto.subtle.exportKey("raw",ACCESS.dkey); keys=Object.assign({},m.access.keys); }
+    else{
+      // 아직 잠기지 않은 사이트: 브라우저가 지금 데이터를 직접 암호화해 올림 (첫 부서 등록 시 1회)
+      rawDk=crypto.getRandomValues(new Uint8Array(32)).buffer; keys={};
+      const rows=DATA.filter(n=>!n.orphan).map(n=>{const o={};SNAP.forEach(k=>{if(n[k]!==undefined)o[k]=n[k];});["award_method","prespec_no","service_div"].forEach(k=>{if(n[k]!==undefined)o[k]=n[k];});return o;});
+      const payload={data:rows,kw:DEFAULT_KW,config_head:HEAD,admin_hash:ADMIN_HASH,github_repo:GH_REPO,github_config_path:GH_PATH,admin_token_enc:TOKEN_ENC};
+      const cs=new CompressionStream("deflate");const w=cs.writable.getWriter();w.write(new TextEncoder().encode(JSON.stringify(payload)));w.close();
+      const z=await new Response(cs.readable).arrayBuffer();
+      const dkey=await crypto.subtle.importKey("raw",rawDk,"AES-GCM",false,["encrypt"]);const iv=crypto.getRandomValues(new Uint8Array(12));
+      const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},dkey,z);
+      if(ADMIN&&PW){keys["관리자"]=await wrapWith(PW,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok);m.admin_dept="관리자";}
+      m.__blob={enc:"aes-gcm-v1",z:"deflate",iv:b64e(iv),ct:b64e(ct)};
+    }
+    if(change.add){keys[change.add.dept]=await wrapWith(change.add.pw,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok);}
+    if(change.del){delete keys[change.del];}
+    if(!m.admin_dept&&ADMIN&&PW&&!keys["관리자"]){keys["관리자"]=await wrapWith(PW,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok);m.admin_dept="관리자";}
+    const access={iter:200000,keys};
+    const meta=Object.assign({},m,{locked:true,depts:Object.keys(keys),access});delete meta.__blob;
+    ["kw","config_head","admin_hash","github_repo","github_config_path","admin_token_enc"].forEach(k=>delete meta[k]);
+    if(m.__blob){const blob=Object.assign({access},m.__blob);await putDocsFile("data.json",JSON.stringify(blob),"관리자: 접근 잠금 시작");}
+    await putDocsFile("meta.json",JSON.stringify(meta),"관리자: 부서 접근 즉시 적용");
+    META_OBJ=meta;M_LOCKED=true;M_DEPTS=meta.depts;
+    t.ok("즉시 적용됨 — 1~2분 뒤 사이트에 반영 (새로고침)");
+    return true;
+  }catch(e){t.err("즉시 적용 실패: "+(e.message||e)+" — 다음 수집 때는 적용됩니다");return false;}
+}
 async function openDeptMgr(target){
   const el=target||$("dmBody");if(!target){$("dm").classList.add("open");$("dm").setAttribute("aria-hidden","false");}
   if(!ACCESS_PUB){el.innerHTML=`<div class="dmnote warn"><b>아직 준비가 안 됐습니다.</b> PC 수집기 폴더에서 <code>make_keys.bat</code>을 한 번 실행하고(.env 에 ACCESS_PRIVATE_KEY 생성), 같은 값을 GitHub Secret <code>ACCESS_PRIVATE_KEY</code>에 넣은 뒤 수집이 한 번 돌면 여기서 부서를 등록할 수 있습니다.</div>`;return;}
@@ -993,7 +1043,7 @@ async function openDeptMgr(target){
   const envDepts=(M_DEPTS||[]).filter(d=>!(doc.depts||{})[d]);
   const rows=Object.entries(doc.depts||{}).map(([d,v])=>`<div class="dmrow"><b>${esc(d)}</b><span>${v.updated?esc(v.updated)+" 등록":""}</span><button class="btn" data-pw="${esc(d)}">비밀번호 변경</button><button class="btn danger" data-del="${esc(d)}">삭제</button></div>`).join("");
   el.innerHTML=`
-    <div class="dmnote">부서를 추가하거나 비밀번호를 바꾸면 <b>다음 수집부터</b> 적용됩니다 (자동수집 최대 1시간, PC에서 run_hidden.vbs 실행 시 즉시). 비밀번호는 어디에도 저장되지 않으니 부서장에게 직접 전달하세요.</div>
+    <div class="dmnote">부서를 추가·변경·삭제하면 <b>바로 적용</b>됩니다 (사이트 반영 1~2분). 비밀번호는 어디에도 저장되지 않으니 부서장에게 직접 전달하세요. 첫 부서를 등록하는 순간 사이트에 로그인이 켜지고, 이 브라우저도 새로고침 후 다시 로그인합니다.</div>
     <section class="ssec"><h3>등록된 부서 <span class="n">${Object.keys(doc.depts||{}).length}</span></h3><div class="scard dmlist">${rows||'<div class="empty" style="padding:16px">아직 없음</div>'}</div>
     ${envDepts.length?`<p class="dmsub">PC .env(ACCESS_PASSWORDS)로 등록된 부서: ${envDepts.map(esc).join(", ")} — 여기서는 관리할 수 없고 .env 에서 바꿉니다.</p>`:""}</section>
     <section class="ssec"><h3>부서 추가</h3><form class="scard dmform" id="dmForm">
@@ -1003,20 +1053,21 @@ async function openDeptMgr(target){
       <button class="btn primary" type="submit">추가</button><span class="msg" id="dmMsg"></span></form></section>`;
   if(!target)$("dmCnt").textContent=`${Object.keys(doc.depts||{}).length}개 등록`;
   const save=async(mut,msg)=>{const m=$("dmMsg");if(m){m.className="msg";m.textContent="저장 중…";}
-    try{const cur=await readAccessFile();mut(cur.doc);await writeAccessFile(cur.doc,cur.sha,msg);toast(msg+" — 다음 수집부터 적용").ok(msg+" 저장됨 — 다음 수집부터 적용");openDeptMgr(target);}
-    catch(e){if(m){m.className="msg err";m.textContent=String(e.message||e);}else alert(e.message||e);}};
+    try{const cur=await readAccessFile();mut(cur.doc);await writeAccessFile(cur.doc,cur.sha,msg);toast(msg+" 저장됨").ok(msg+" 저장됨");openDeptMgr(target);return true;}
+    catch(e){if(m){m.className="msg err";m.textContent=String(e.message||e);}else alert(e.message||e);return false;}};
   $("dmForm").onsubmit=async e=>{e.preventDefault();const name=$("dmName").value.trim(),pw=$("dmPw").value,pw2=$("dmPw2").value;
     if(pw!==pw2){$("dmMsg").className="msg err";$("dmMsg").textContent="비밀번호 확인이 다릅니다.";return;}
     if((doc.depts||{})[name]&&!confirm(`'${name}' 은 이미 있습니다. 비밀번호를 바꿀까요?`))return;
-    const sealed=await sealKek(pw);await save(d=>{d.depts=d.depts||{};d.depts[name]=sealed;},`부서 ${name} 등록`);};
-  el.querySelectorAll("[data-pw]").forEach(b=>b.onclick=async()=>{const pw=prompt(`'${b.dataset.pw}' 새 비밀번호 (8자 이상)`);if(!pw||pw.length<8)return;const sealed=await sealKek(pw);await save(d=>{d.depts[b.dataset.pw]=sealed;},`부서 ${b.dataset.pw} 비밀번호 변경`);});
-  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{if(!confirm(`'${b.dataset.del}' 부서를 삭제할까요? 다음 수집부터 이 부서로는 접속할 수 없습니다.`))return;await save(d=>{delete d.depts[b.dataset.del];},`부서 ${b.dataset.del} 삭제`);});
+    const sealed=await sealKek(pw);const ok=await save(d=>{d.depts=d.depts||{};d.depts[name]=sealed;},`부서 ${name} 등록`);if(ok!==false)await applyAccessNow({add:{dept:name,pw}});};
+  el.querySelectorAll("[data-pw]").forEach(b=>b.onclick=async()=>{const pw=prompt(`'${b.dataset.pw}' 새 비밀번호 (8자 이상)`);if(!pw||pw.length<8)return;const sealed=await sealKek(pw);const ok=await save(d=>{d.depts[b.dataset.pw]=sealed;},`부서 ${b.dataset.pw} 비밀번호 변경`);if(ok!==false)await applyAccessNow({add:{dept:b.dataset.pw,pw}});});
+  el.querySelectorAll("[data-del]").forEach(b=>b.onclick=async()=>{if(!confirm(`'${b.dataset.del}' 부서를 삭제할까요? 다음 수집부터 이 부서로는 접속할 수 없습니다.`))return;const ok=await save(d=>{delete d.depts[b.dataset.del];},`부서 ${b.dataset.del} 삭제`);if(ok!==false)await applyAccessNow({del:b.dataset.del});});
 }
 $("dmClose").onclick=()=>{$("dm").classList.remove("open");$("dm").setAttribute("aria-hidden","true");};
 $("btnDeptMgr").onclick=openDeptMgr;
 /* ── 관리자 콘솔: 모든 관리 기능을 한 곳에 ── */
 let AC_TAB="home";
 async function openAdmin(){
+  if(ADMIN&&!PW){const pw=prompt("관리자 비밀번호 (GitHub 연결용 1회 확인)");if(pw===null)return;if(await sha256(pw)!==ADMIN_HASH){alert("비밀번호가 맞지 않습니다.");return;}PW=pw;if(TOKEN_ENC){try{TOKEN=await unlock(TOKEN_ENC,pw);}catch(e){}}}
   if(!ADMIN){
     const pw=prompt("관리자 비밀번호");if(pw===null)return;
     if(await sha256(pw)!==ADMIN_HASH){alert("비밀번호가 맞지 않습니다.");return;}
@@ -1079,7 +1130,7 @@ async function acShow(t){
       </div></section>
       <section class="ssec"><h3>관리자 비밀번호 변경</h3><div class="scard acform">
         <div class="row2"><input id="acPw1" type="password" placeholder="새 비밀번호 (8자 이상)"><input id="acPw2" type="password" placeholder="확인"><button class="btn" id="acPwSave">변경</button></div>
-        <small>저장 즉시 config.yaml 에 반영되고 다음 수집부터 새 비밀번호로 들어옵니다. 그 전까지는 이전 비밀번호.</small><span class="msg" id="acPwMsg"></span>
+        <small>저장 즉시 반영됩니다 (잠금이 켜져 있으면 로그인 비밀번호도 바로 교체).</small><span class="msg" id="acPwMsg"></span>
       </div></section>
       <section class="ssec"><h3>수집·배포</h3><div class="scard acchk">
         <div><span>자동 수집</span>PC 작업 스케줄러 'BidMonitor' 매시 05분 + GitHub Actions 평일 08~18시 매시</div>
@@ -1094,10 +1145,12 @@ async function acShow(t){
       if(a.length<8){m.className="msg err";m.textContent="8자 이상이어야 합니다.";return;} if(a!==b){m.className="msg err";m.textContent="확인이 다릅니다.";return;}
       if(!TOKEN){m.className="msg err";m.textContent="먼저 GitHub 토큰을 등록해 주세요.";return;}
       HEAD=HEAD.replace(/^admin_password:.*$/m,"admin_password: "+a);PW=a;TOKEN_ENC=await lock(TOKEN,PW);
-      await saveDefaults(null,m);ADMIN_HASH=await sha256(a);$("acPw1").value=$("acPw2").value="";};
+      await saveDefaults(null,m);ADMIN_HASH=await sha256(a);$("acPw1").value=$("acPw2").value="";
+      if(M_LOCKED&&ACCESS)await applyAccessNow({add:{dept:(META_OBJ&&META_OBJ.admin_dept)||"관리자",pw:a}});   // 관리자 로그인 열쇠도 즉시 교체
+      else toast("저장됨 — 로그인 화면의 관리자 비밀번호는 다음 수집부터 새 값").ok("저장됨");};
   }
 }
-let M_LOCKED=false;
+let M_LOCKED=false, META_OBJ=null;
 const STAR_BY=(n,st)=>{const o=(st.star||{})[n.key]||{};return (o.starred_at?o.starred_at+" 체크":"")+(n.orphan?" · 수집 목록에서 빠짐":"");};
 let M_DEPTS=null, ACCESS_PUB="";
 $("dvClose").onclick=()=>{$("dv").classList.remove("open");$("dv").setAttribute("aria-hidden","true");};
@@ -1341,7 +1394,7 @@ fillKw();
 /* ── 부서 비밀번호 잠금 (meta.locked) ── */
 const LS_ACC="bidmon.access";
 const b64d=s=>Uint8Array.from(atob(s),c=>c.charCodeAt(0));
-const b64e=b=>btoa(String.fromCharCode(...new Uint8Array(b)));
+const b64e=b=>{const u=new Uint8Array(b);let s="";for(let i=0;i<u.length;i+=0x8000)s+=String.fromCharCode.apply(null,u.subarray(i,i+0x8000));return btoa(s);};   // 큰 버퍼도 안전 (청크)
 let ACCESS=null;   // {dept}
 async function deriveKey(pw,salt,iter){
   const km=await crypto.subtle.importKey("raw",new TextEncoder().encode(pw),"PBKDF2",false,["deriveBits"]);
@@ -1351,7 +1404,7 @@ async function unwrapDataKey(acc,dept,kekRaw){
   const k=acc.keys[dept];if(!k)throw new Error("no dept");
   const kek=await crypto.subtle.importKey("raw",kekRaw,"AES-GCM",false,["decrypt"]);
   const dk=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(k.iv)},kek,b64d(k.ct));
-  const dkey=await crypto.subtle.importKey("raw",dk,"AES-GCM",false,["encrypt","decrypt"]);
+  const dkey=await crypto.subtle.importKey("raw",dk,"AES-GCM",true,["encrypt","decrypt"]);   // 추출 가능: 관리자가 새 부서에 즉시 열쇠를 나눠주기 위해
   let tok="";
   if(k.tok){try{tok=new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(k.tok.iv)},kek,b64d(k.tok.ct)));}catch(e){}}
   return {dkey,tok};
@@ -1368,7 +1421,8 @@ async function decryptBlob(blob,dkey){
 }
 function showLock(m,msg){
   return new Promise(res=>{
-    const depts=m.depts||Object.keys(m.access.keys);
+    const ADM=m.admin_dept||"";
+    const depts=(m.depts||Object.keys(m.access.keys)).filter(d=>d!==ADM);
     const saved=load(LS_ACC,null);
     const root=$("lock");
     const step1=(err)=>{
@@ -1376,12 +1430,14 @@ function showLock(m,msg){
         <div class="opts">${depts.map((d,i)=>`<button type="button" class="pill${saved&&saved.dept===d?' pri':''}" data-d="${esc(d)}">${esc(d)}<span>으로 계속</span></button>`).join("")}</div>
         ${saved?`<p class="hint">지난번에 ${esc(saved.dept)}으로 접속했습니다</p>`:`<p class="hint">소속 부서를 선택하세요</p>`}
         ${err?`<p class="err">${err}</p>`:""}
-        <p class="foot">비밀번호는 부서장 또는 경영지원에 문의</p></div>`;
+        <p class="foot">비밀번호는 부서장 또는 경영지원에 문의${ADM?` · <a href="#" id="lkAdm">관리자로 로그인</a>`:""}</p></div>`;
       root.querySelectorAll(".pill").forEach(b=>b.onclick=()=>step2(b.dataset.d));
+      if($("lkAdm"))$("lkAdm").onclick=e=>{e.preventDefault();step2(ADM);};
     };
     const step2=(dept)=>{
+      const isAdm=dept===ADM;
       root.innerHTML=`<form class="lk" id="lkForm"><span class="logo"></span><h1>${esc(dept)}</h1>
-        <input id="lkPw" type="password" class="pillin" placeholder="부서 비밀번호" autocomplete="current-password">
+        <input id="lkPw" type="password" class="pillin" placeholder="${isAdm?"관리자 비밀번호":"부서 비밀번호"}" autocomplete="current-password">
         <button type="submit" class="pill pri" id="lkBtn">열기</button>
         <label class="ck"><input type="checkbox" id="lkRemember" checked> 이 기기에서 기억</label>
         <p class="err" id="lkErr"></p>
@@ -1396,12 +1452,13 @@ function showLock(m,msg){
           const kek=await deriveKey(pw,salt,m.access.iter||200000);
           const {dkey,tok}=await unwrapDataKey(m.access,dept,kek);
           if($("lkRemember").checked)save(LS_ACC,{dept,kek:b64e(kek)});else{try{sessionStorage.setItem(LS_ACC,JSON.stringify({dept,kek:b64e(kek)}));}catch(x){}}
+          if(isAdm){ADMIN=true;PW=pw;}                       // 관리자 로그인: 잠금 해제 + 관리자 모드 동시에
           root.classList.remove("open");res({dept,dkey,tok});
         }catch(err){$("lkErr").textContent="비밀번호가 맞지 않습니다.";$("lkBtn").disabled=false;$("lkBtn").textContent="열기";$("lkPw").select();}
       };
     };
     root.classList.add("open");
-    if(saved&&depts.includes(saved.dept)&&!msg)step2(saved.dept); else step1(msg);
+    if(saved&&(depts.includes(saved.dept)||saved.dept===ADM)&&!msg)step2(saved.dept); else step1(msg);
   });
 }
 async function unlockDept(m){
@@ -1417,7 +1474,7 @@ function lockOut(){localStorage.removeItem(LS_ACC);try{sessionStorage.removeItem
 /* ── 부서 공유 상태: 관심 공고(체크) + 부서 키워드 → 저장소 docs/state/<부서>.json (부서 데이터키로 암호화) ── */
 const GH_H=()=>({Authorization:"Bearer "+((ACCESS&&ACCESS.tok)||TOKEN||""),Accept:"application/vnd.github+json","X-GitHub-Api-Version":"2022-11-28"});
 const stateUrl=d=>`https://api.github.com/repos/${GH_REPO}/contents/docs/state/${encodeURIComponent(d)}.json`;
-const b64utf=str=>btoa(String.fromCharCode(...new TextEncoder().encode(str)));
+const b64utf=str=>b64e(new TextEncoder().encode(str));
 async function fetchState(dept){
   const r=await fetch(stateUrl(dept)+"?ref=main&t="+Date.now(),{headers:GH_H(),cache:"no-store"});
   if(r.status===404)return {sha:undefined,state:{kw:null,star:{},updated:""}};
@@ -1470,7 +1527,7 @@ async function loadData(){
     let m={};
     try{m=await (await fetch("meta.json?t="+Date.now(),{cache:"no-cache"})).json();}catch(e){}   // 아직 meta.json 이 없어도 데이터는 보여줌
     let payload=null;
-    M_DEPTS=m.depts||null; ACCESS_PUB=m.access_pub||""; M_LOCKED=!!(m.locked&&m.access);
+    M_DEPTS=m.depts||null; ACCESS_PUB=m.access_pub||""; M_LOCKED=!!(m.locked&&m.access); META_OBJ=m;
     if(m.locked&&m.access){
       if(!crypto.subtle){$("list").innerHTML='<div class="empty">이 브라우저는 암호화 해제를 지원하지 않습니다. https 주소로 열어 주세요.</div>';return;}
       ACCESS=await unlockDept(m);
@@ -1479,6 +1536,7 @@ async function loadData(){
       payload=await decryptBlob(await r.json(),ACCESS.dkey);
       Object.assign(m,{kw:payload.kw,config_head:payload.config_head,admin_hash:payload.admin_hash,github_repo:payload.github_repo,github_config_path:payload.github_config_path,admin_token_enc:payload.admin_token_enc});
       $("who").innerHTML=`<span>${esc(ACCESS.dept)}</span> 로 접속 · <a href="#" id="lockOut">나가기</a>`;$("lockOut").onclick=e=>{e.preventDefault();lockOut();};
+      if(m.admin_dept&&ACCESS.dept===m.admin_dept){ADMIN=true;if(payload.admin_token_enc&&PW){try{TOKEN=await unlock(payload.admin_token_enc,PW);}catch(e){}}}
       GH_REPO=payload.github_repo||"";
       await loadDeptState();
     }
