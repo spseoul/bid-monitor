@@ -28,6 +28,8 @@ jobs:
       - name: 수집 (실패 시 5분 후 재시도, 최대 3회)
         env:
           G2B_SERVICE_KEY: ${{ secrets.G2B_SERVICE_KEY }}
+          ACCESS_PRIVATE_KEY: ${{ secrets.ACCESS_PRIVATE_KEY }}   # 부서 로그인 (make_keys.bat 로 만든 키)
+          GITHUB_TOKEN: ${{ secrets.STATE_TOKEN }}                 # 부서 관심공고 저장용 PAT (Contents: Read and write)
           TZ: Asia/Seoul
         run: |
           for i in 1 2 3; do
@@ -40,7 +42,7 @@ jobs:
       - name: 페이지 복사 및 커밋
         run: |
           mkdir -p ../docs
-             for f in docs/*; do [ "$(basename $f)" = seen.json ] || cp "$f" ../docs/; done
+          for f in docs/*; do [ "$(basename "$f")" = "seen.json" ] || cp -r "$f" ../docs/; done   # 페이지·데이터·아이콘 전부 (seen.json 제외)
           git config user.name "bid-bot"
           git config user.email "bid-bot@users.noreply.github.com"
           git add docs/ ../docs/
