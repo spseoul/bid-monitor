@@ -32,19 +32,40 @@ SEEN = DOCS / "seen.json"
 DATAF = DOCS / "data.json"
 STATIC = ROOT / "bidmon" / "static"      # sw.js, manifest, 아이콘 → docs/ 로 복사
 KEEP = ["key", "notice_no", "title", "institution", "demand_institution", "notice_date", "close_date",
-        "estimated_price", "budget", "award_method", "notice_kind", "url", "tags", "category", "prespec_no"]
+        "estimated_price", "budget", "award_method", "notice_kind", "url", "tags", "category", "prespec_no", "service_div"]
+
+
+from bidmon import secure
+
+META = DOCS / "meta.json"
+ACCESS_FILE = ROOT / "bidmon" / "access.json"      # 관리자가 화면에서 등록한 부서 (RSA 공개키로 봉인된 부서키)
+
+
+def dept_keys():
+    """잠금에 쓸 부서 키 모음: .env ACCESS_PASSWORDS + 화면에서 등록한 bidmon/access.json"""
+    priv = secure.private_key_from_env()
+    d = secure.depts_from_passwords(secure.passwords_from_env())
+    d.update(secure.depts_from_access_file(ACCESS_FILE, priv))
+    return d, priv
 
 
 def load_previous() -> dict[str, dict]:
-    """이전 data.json (없으면 옛 index.html 안의 DATA) 을 key→row 로 복원"""
+    """이전 data.json (없으면 옛 index.html 안의 DATA) 을 key→row 로 복원. 잠긴(암호화) 파일이면 ACCESS_PASSWORDS 로 품"""
     if DATAF.exists():
         try:
-            rows = json.loads(DATAF.read_text(encoding="utf-8"))
-            rows = rows if isinstance(rows, list) else rows.get("data", [])
+            obj = json.loads(DATAF.read_text(encoding="utf-8"))
+            if secure.is_encrypted(obj):
+                depts, _ = dept_keys()
+                if not depts:
+                    log.error("이전 data.json 이 잠겨 있는데 부서 키(.env ACCESS_PASSWORDS / ACCESS_PRIVATE_KEY)가 없어 풀 수 없습니다 → 전체 재수집으로 진행")
+                    obj = []
+                else:
+                    obj = secure.decrypt(obj, None, {}, depts)
+            rows = obj if isinstance(obj, list) else obj.get("data", [])
             if rows:
                 return {r["key"]: r for r in rows if r.get("key")}
-        except json.JSONDecodeError:
-            pass
+        except (json.JSONDecodeError, RuntimeError) as e:
+            log.error("이전 data.json 읽기 실패: %s", e)
     if not INDEX.exists():
         return {}
     m = re.search(r"const DATA=(\[.*?\]);\n", INDEX.read_text(encoding="utf-8"), re.S)
@@ -110,7 +131,7 @@ def main():
         categorize(n)
         d = {k: getattr(n, k) for k in KEEP}
         old = prev.get(n.key) or {}
-        for k in ("notice_date", "close_date", "estimated_price", "budget", "demand_institution", "prespec_no"):
+        for k in ("notice_date", "close_date", "estimated_price", "budget", "demand_institution", "prespec_no", "service_div"):
             if not d.get(k) and old.get(k):  # 이번에 비어 있으면 이전 값 유지 (LH 상세 생략 시)
                 d[k] = old[k]
         d["first_seen"] = seen.setdefault(n.key, today)
@@ -151,8 +172,25 @@ def main():
         html = tpl                                       # 새 템플릿: 그대로 복사 (설정은 meta.json 에서 읽음)
     DOCS.mkdir(exist_ok=True)
     INDEX.write_text(html, encoding="utf-8")
-    DATAF.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-    (DOCS / "meta.json").write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
+    depts, priv = dept_keys()
+    if priv:                                             # 관리자 화면의 [부서 관리]가 쓸 공개키
+        meta["access_pub"] = secure.public_key_b64(priv)
+    if depts:
+        # 부서별 비밀번호 잠금: 공고·키워드·관리자 설정은 암호문으로, meta 에는 공개해도 되는 것만
+        secret_keys = ("kw", "config_head", "admin_hash", "github_repo", "github_config_path", "admin_token_enc")
+        payload = {"data": data, **{k: meta[k] for k in secret_keys}}
+        # 부서 상태(관심 공고·부서 키워드)를 저장소 docs/state/<부서>.json 에 쓰기 위한 토큰도 부서 비밀번호로 감싸 둠
+        tok = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
+        access, blob = secure.encrypt(payload, depts, {"tok": tok})
+        if not tok:
+            log.warning("GITHUB_TOKEN 이 없어 부서별 관심 공고·키워드 공유 저장은 꺼집니다 (기기별 저장만 동작)")
+        meta = {k: v for k, v in meta.items() if k not in secret_keys}
+        meta.update({"locked": True, "depts": list(depts.keys()), "access": access})
+        DATAF.write_text(json.dumps(blob, separators=(",", ":")), encoding="utf-8")
+        log.info("부서별 잠금 적용: %s", ", ".join(depts.keys()))
+    else:
+        DATAF.write_text(json.dumps(data, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    META.write_text(json.dumps(meta, ensure_ascii=False), encoding="utf-8")
     if STATIC.exists():
         import shutil
         for f in STATIC.iterdir():
