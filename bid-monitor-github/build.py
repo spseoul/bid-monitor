@@ -175,6 +175,9 @@ def main():
     depts, priv = dept_keys()
     if priv:                                             # 관리자 화면의 [부서 관리]가 쓸 공개키
         meta["access_pub"] = secure.public_key_b64(priv)
+    if depts and cfg.get("admin_password"):              # 관리자는 부서 없이 관리자 비밀번호만으로 로그인 (숨은 부서 "관리자")
+        depts = {**depts, **secure.depts_from_passwords({"관리자": str(cfg["admin_password"])})}
+        meta["admin_dept"] = "관리자"
     if depts:
         # 부서별 비밀번호 잠금: 공고·키워드·관리자 설정은 암호문으로, meta 에는 공개해도 되는 것만
         secret_keys = ("kw", "config_head", "admin_hash", "github_repo", "github_config_path", "admin_token_enc")
