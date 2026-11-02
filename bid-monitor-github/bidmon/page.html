@@ -137,6 +137,7 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 /* ── 키워드 패널 ── */
 #panel{display:none;border-bottom:1px solid var(--line);background:var(--grp);flex:none}
 .row{cursor:pointer}
+[hidden]{display:none!important}
 /* ── 부서 비밀번호 잠금 화면 (리니어 로그인처럼: 카드 없이 로고·제목·알약 버튼) ── */
 #lock{position:fixed;inset:0;z-index:90;background:var(--outer);display:none;align-items:center;justify-content:center;padding:20px}
 #lock.open{display:flex}
@@ -589,7 +590,7 @@ let PAGE=1;
 let MYKW=load(LS_KW,null);
 let DSTATE=null, DEPTKW=null;   // 부서 공유 상태 (잠금 모드에서 로드)
 const EMPTY_KW={include:[],exclude:[]};
-const curKW=()=>S.src==="mine"?(MYKW||EMPTY_KW):S.src==="dept"?(DEPTKW||DEFAULT_KW):DEFAULT_KW;
+const curKW=()=>S.src==="mine"?(MYKW||EMPTY_KW):S.src==="dept"?(DEPTKW||EMPTY_KW):DEFAULT_KW;
 const norm=s=>String(s||"").replace(/\s/g,"");
 const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const dday=c=>{if(!c)return null;return Math.floor((new Date(c.replace(" ","T"))-NOW)/864e5);};
@@ -753,7 +754,7 @@ function render(){
   $("count").textContent=rows.length.toLocaleString();
   const el=$("list");
   if(!rows.length){
-    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":"조건에 맞는 공고가 없습니다."))+'</div>';
+    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.src==="dept"&&!DEPTKW&&S.view!=="all")?"부서 키워드가 아직 없습니다. [키워드 편집]에서 입력하거나, 왼쪽 [회사 기본값]을 선택하세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":"조건에 맞는 공고가 없습니다."))+'</div>';
     return;
   }
   if(S.view==="matched"){renderMatched(rows,el);el.scrollTop=0;return;}
@@ -822,7 +823,7 @@ function syncSrc(){
     const dn=ACCESS?ACCESS.dept:"부서";
     $("pTitle").textContent=S.src==="mine"?"내 키워드":S.src==="dept"?dn+" 키워드":"회사 기본값";
     $("pDesc").textContent=S.src==="mine"?(MYKW?"이 브라우저에만 저장됩니다.":"아직 비어 있습니다. 직접 입력하거나 [기본값 복사해오기].")
-      :S.src==="dept"?(DEPTKW?`${dn} 구성원 모두에게 적용됩니다 (저장 즉시 공유).`:"아직 비어 있어 회사 기본값을 씁니다. 직접 입력하거나 [기본값 복사해오기] 후 저장.")
+      :S.src==="dept"?(DEPTKW?`${dn} 구성원 모두에게 적용됩니다 (저장 즉시 공유).`:"아직 비어 있습니다. 직접 입력하거나 [기본값 복사해오기]로 시작한 뒤 [저장].")
       :DSTATE?"회사 공통 키워드입니다. 고쳐서 [저장]하면 "+dn+" 키워드로 저장됩니다 (회사 기본값은 [기본값 편집]에서만 변경).":"모두가 함께 쓰는 값입니다. 고치려면 [기본값 편집].";
     $("btnReset2").hidden=S.src==="default";
   }
