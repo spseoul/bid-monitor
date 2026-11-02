@@ -99,7 +99,29 @@ def derive(pw: str, salt: bytes, iters: int = ITER) -> bytes:
     return hashlib.pbkdf2_hmac("sha256", pw.encode("utf-8"), salt, iters, 32)
 
 
-def encrypt(payload: dict, depts: dict[str, dict], extra: dict | None = None) -> tuple[dict, dict]:
+def rsa_seal(priv_or_pub, data: bytes) -> str:
+    serialization, hashes, rsa, padding = _rsa()
+    pub = priv_or_pub.public_key() if hasattr(priv_or_pub, "public_key") else priv_or_pub
+    return _b64(pub.encrypt(data, padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None)))
+
+
+def rsa_open(priv, b64: str) -> bytes:
+    serialization, hashes, rsa, padding = _rsa()
+    return priv.decrypt(_unb64(b64), padding.OAEP(mgf=padding.MGF1(hashes.SHA256()), algorithm=hashes.SHA256(), label=None))
+
+
+def state_key_from_previous(prev_access: dict | None, priv) -> bytes | None:
+    """이전 배포의 access.state_key_enc(RSA 봉인) 에서 부서 상태 키를 복원 — 매 빌드 같은 키를 이어 써야 부서 관심공고·키워드가 유지됨"""
+    if not prev_access or not priv or not prev_access.get("state_key_enc"):
+        return None
+    try:
+        return rsa_open(priv, prev_access["state_key_enc"])
+    except Exception:
+        return None
+
+
+def encrypt(payload: dict, depts: dict[str, dict], extra: dict | None = None,
+            state_key: bytes | None = None, priv=None) -> tuple[dict, dict]:
     """depts: {부서: {"kek": 32바이트, "salt": 16바이트}}  (depts_from_passwords / depts_from_access_file 결과를 합친 것)
     → (meta 에 넣을 access 블록, data.json 에 쓸 암호문 블록)
     extra: 부서별로 함께 감싸 둘 작은 비밀값 (예: {"tok": GitHub 토큰} — 부서 상태 파일 저장용)"""
@@ -113,11 +135,16 @@ def encrypt(payload: dict, depts: dict[str, dict], extra: dict | None = None) ->
         kek = AESGCM(d["kek"])
         kiv = secrets.token_bytes(12)
         keys[dept] = {"salt": _b64(d["salt"]), "iv": _b64(kiv), "ct": _b64(kek.encrypt(kiv, dk, None))}
+        if state_key:                                     # 부서 상태(관심공고·키워드) 파일용 고정 키 — 데이터 키와 달리 빌드마다 바뀌지 않음
+            siv = secrets.token_bytes(12)
+            keys[dept]["sk"] = {"iv": _b64(siv), "ct": _b64(kek.encrypt(siv, state_key, None))}
         for name, val in (extra or {}).items():
             if val:
                 xiv = secrets.token_bytes(12)
                 keys[dept][name] = {"iv": _b64(xiv), "ct": _b64(kek.encrypt(xiv, str(val).encode("utf-8"), None))}
     access = {"iter": ITER, "keys": keys}
+    if state_key and priv:
+        access["state_key_enc"] = rsa_seal(priv, state_key)   # 다음 빌드가 같은 상태 키를 이어 쓰도록 공개키로 봉인해 둠
     blob = {"enc": "aes-gcm-v1", "z": "deflate", "access": access, "iv": _b64(iv), "ct": _b64(ct)}
     return access, blob
 
