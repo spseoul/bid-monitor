@@ -1456,7 +1456,8 @@ function showLock(m,msg){
           const {dkey,tok}=await unwrapDataKey(m.access,dept,kek);
           if($("lkRemember").checked)save(LS_ACC,{dept,kek:b64e(kek)});else{try{sessionStorage.setItem(LS_ACC,JSON.stringify({dept,kek:b64e(kek)}));}catch(x){}}
           if(isAdm){ADMIN=true;PW=pw;}                       // 관리자 로그인: 잠금 해제 + 관리자 모드 동시에
-          root.classList.remove("open");res({dept,dkey,tok});
+          root.innerHTML='<div class="lk"><span class="logo"></span></div>';root.classList.add("boot");   // 데이터·부서 설정을 다 받을 때까지 로고 커버 유지
+          res({dept,dkey,tok});
         }catch(err){$("lkErr").textContent="비밀번호가 맞지 않습니다.";$("lkBtn").disabled=false;$("lkBtn").textContent="열기";$("lkPw").select();}
       };
     };
@@ -1538,12 +1539,13 @@ async function loadData(){
       const r=await fetch("data.json?v="+(m.ver||Date.now()),{cache:"no-cache"});
       if(!r.ok)throw new Error(r.status);
       payload=await decryptBlob(await r.json(),ACCESS.dkey);
-      $("lock").classList.remove("open","boot");
       Object.assign(m,{kw:payload.kw,config_head:payload.config_head,admin_hash:payload.admin_hash,github_repo:payload.github_repo,github_config_path:payload.github_config_path,admin_token_enc:payload.admin_token_enc});
       $("who").innerHTML=`<span>${esc(ACCESS.dept)}</span> 로 접속 · <a href="#" id="lockOut">나가기</a>`;$("lockOut").onclick=e=>{e.preventDefault();lockOut();};
       if(m.admin_dept&&ACCESS.dept===m.admin_dept){ADMIN=true;if(payload.admin_token_enc&&PW){try{TOKEN=await unlock(payload.admin_token_enc,PW);}catch(e){}}}
       GH_REPO=payload.github_repo||"";
       await loadDeptState();
+      syncSrc();                                             // 부서 메뉴/내 키워드 표시를 먼저 맞춘 뒤 커버를 내림
+      $("lock").classList.remove("open","boot");
     }
     DEFAULT_KW=m.kw||DEFAULT_KW; BUILT=m.built||BUILT; NOW=new Date(BUILT); TODAY=BUILT.slice(0,10);
     CONFIG_HEAD=m.config_head||""; HEAD=CONFIG_HEAD; ADMIN_HASH=m.admin_hash||""; GH_REPO=m.github_repo||""; GH_PATH=m.github_config_path||""; TOKEN_ENC=m.admin_token_enc||"";
