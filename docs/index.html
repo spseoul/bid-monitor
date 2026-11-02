@@ -140,6 +140,8 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 /* ── 부서 비밀번호 잠금 화면 (리니어 로그인처럼: 카드 없이 로고·제목·알약 버튼) ── */
 #lock{position:fixed;inset:0;z-index:90;background:var(--outer);display:none;align-items:center;justify-content:center;padding:20px}
 #lock.open{display:flex}
+#lock.boot .lk{opacity:.0;animation:lkfade .25s .15s forwards}
+@keyframes lkfade{to{opacity:1}}
 .lk{width:288px;display:flex;flex-direction:column;align-items:center;gap:10px;margin-top:-6vh}
 .lk span.logo{width:40px;height:40px;margin-bottom:10px}
 .lk h1{font-size:17px;font-weight:500;margin:0 0 14px;letter-spacing:-.01em;color:var(--ink)}
@@ -543,7 +545,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   <div class="list" id="list"></div>
 </main>
 <div id="dim"></div>
-<div id="lock" aria-hidden="true"></div>
+<div id="lock" class="open boot" aria-hidden="true"><div class="lk"><span class="logo"></span></div></div>
 <section id="dv" aria-hidden="true"><div class="hd"><h2>부서별 관심 현황</h2><span class="cnt" id="dvCnt"></span><span class="r"><button class="x" id="dvClose" title="닫기">×</button></span></div><div class="bd" id="dvBody"></div></section>
 <section id="ac" aria-hidden="true">
   <div class="hd"><h2>관리자</h2><span class="cnt" id="acWho"></span><span class="r"><button class="x" id="acClose" title="닫기">×</button></span></div>
@@ -1457,7 +1459,7 @@ function showLock(m,msg){
         }catch(err){$("lkErr").textContent="비밀번호가 맞지 않습니다.";$("lkBtn").disabled=false;$("lkBtn").textContent="열기";$("lkPw").select();}
       };
     };
-    root.classList.add("open");
+    root.classList.add("open");root.classList.remove("boot");
     if(saved&&(depts.includes(saved.dept)||saved.dept===ADM)&&!msg)step2(saved.dept); else step1(msg);
   });
 }
@@ -1528,12 +1530,14 @@ async function loadData(){
     try{m=await (await fetch("meta.json?t="+Date.now(),{cache:"no-cache"})).json();}catch(e){}   // 아직 meta.json 이 없어도 데이터는 보여줌
     let payload=null;
     M_DEPTS=m.depts||null; ACCESS_PUB=m.access_pub||""; M_LOCKED=!!(m.locked&&m.access); META_OBJ=m;
+    if(!M_LOCKED){$("lock").classList.remove("open","boot");}   // 잠금 없음 → 로고 커버 내림
     if(m.locked&&m.access){
       if(!crypto.subtle){$("list").innerHTML='<div class="empty">이 브라우저는 암호화 해제를 지원하지 않습니다. https 주소로 열어 주세요.</div>';return;}
       ACCESS=await unlockDept(m);
       const r=await fetch("data.json?v="+(m.ver||Date.now()),{cache:"no-cache"});
       if(!r.ok)throw new Error(r.status);
       payload=await decryptBlob(await r.json(),ACCESS.dkey);
+      $("lock").classList.remove("open","boot");
       Object.assign(m,{kw:payload.kw,config_head:payload.config_head,admin_hash:payload.admin_hash,github_repo:payload.github_repo,github_config_path:payload.github_config_path,admin_token_enc:payload.admin_token_enc});
       $("who").innerHTML=`<span>${esc(ACCESS.dept)}</span> 로 접속 · <a href="#" id="lockOut">나가기</a>`;$("lockOut").onclick=e=>{e.preventDefault();lockOut();};
       if(m.admin_dept&&ACCESS.dept===m.admin_dept){ADMIN=true;if(payload.admin_token_enc&&PW){try{TOKEN=await unlock(payload.admin_token_enc,PW);}catch(e){}}}
@@ -1555,6 +1559,7 @@ async function loadData(){
   }catch(e){
     console.error(e);
     $("list").innerHTML='<div class="empty">데이터를 불러오지 못했습니다. 네트워크를 확인한 뒤 새로고침해 주세요.</div>';
+    $("lock").classList.remove("open","boot");
     return;
   }
   judgeAll();render();syncUI();
