@@ -83,13 +83,6 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 .grp .n{color:var(--ink3);font-weight:400;font-size:12px}
 .row{display:flex;align-items:center;gap:10px;padding:0 14px;height:40px;border-bottom:1px solid var(--line2)}
 .row:hover{background:var(--hov)}
-.row .ext{flex:none;width:26px;height:26px;display:grid;place-items:center;border-radius:6px;color:var(--ink3);margin-left:2px}
-.row .ext svg{width:14px;height:14px}
-.row .ext:hover{background:var(--panel);color:var(--acc);box-shadow:0 0 0 1px var(--line)}
-.row .chev{flex:none;width:14px;color:var(--ink3);font-size:18px;line-height:1;text-align:center;opacity:.45}
-.row:hover .chev{opacity:1;color:var(--acc)}
-.row:hover .t{color:var(--acc)}
-.t:hover{text-decoration:none}
 .chk{display:inline-flex;flex:none;width:18px;height:18px;align-items:center;justify-content:center;cursor:pointer;margin-left:-4px}
 .chk input{position:absolute;opacity:0;width:0;height:0}
 .chk i{width:16px;height:16px;border:1.5px solid var(--line);border-radius:4px;display:block;background:var(--bg);transition:.12s}
@@ -115,6 +108,7 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 .dd.u{color:var(--red)}
 .st{width:14px;height:14px;flex:none}
 .t{font-size:13px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1;min-width:60px}
+.t:hover{text-decoration:underline}
 .right{display:flex;align-items:center;gap:7px;flex:none}
 .lbl{display:inline-flex;align-items:center;gap:5px;border:1px solid var(--line);border-radius:11px;padding:0 8px;height:21px;font-size:11.5px;color:var(--ink2);white-space:nowrap;max-width:120px;overflow:hidden;text-overflow:ellipsis}
 .av{width:19px;height:19px;border-radius:50%;display:grid;place-items:center;font-size:9.5px;font-weight:700;color:#0a0a0b;flex:none}
@@ -137,13 +131,6 @@ select{-webkit-appearance:none;appearance:none;border:1px solid var(--line);bord
 /* ── 키워드 패널 ── */
 #panel{display:none;border-bottom:1px solid var(--line);background:var(--grp);flex:none}
 .row{cursor:pointer}
-/* 첫 방문 안내 */
-#tip{display:flex;flex-wrap:wrap;align-items:center;gap:6px 14px;margin:10px 14px 0;padding:9px 12px;border:1px solid color-mix(in srgb,var(--acc) 35%,var(--line));background:color-mix(in srgb,var(--acc) 7%,var(--panel));border-radius:9px;font-size:12.5px;color:var(--ink2)}
-#tip[hidden]{display:none}
-#tip b{color:var(--acc);font-weight:600}
-#tip em{font-style:normal;font-weight:600;color:var(--ink)}
-#tip svg{width:13px;height:13px;vertical-align:-2px}
-#tip button{margin-left:auto;border:1px solid var(--line);background:var(--panel);border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;color:var(--ink2)}
 /* ── 상세 패널 (오른쪽 서랍) ── */
 #dim{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:60;display:none}
 #dim.open{display:block}
@@ -373,16 +360,6 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 @media (max-width:600px), ((max-width:1024px) and (orientation:portrait) and (pointer:coarse)){
   main[data-view="pre"] .lbl.pre{display:none}   /* 사전규격 화면에서는 '사전규격' 꼬리표 중복이라 숨김 */
 }
-@media (max-width:600px), ((max-width:1024px) and (orientation:portrait) and (pointer:coarse)){
-  .row .chev{display:none}
-  .row.row:not(.pair) .ext{grid-row:1;grid-column:3;align-self:start;margin:0}
-  .row.row:not(.pair):has(.chk) .ext{grid-column:4}
-  .row.row:not(.pair):has(.chk){grid-template-columns:44px 1fr auto auto}
-  .row.pair.pair .ext{grid-row:1;grid-column:3;justify-self:end;margin:0}
-  .row.pair.pair{grid-template-columns:auto auto 1fr auto auto}
-  .row.pair.pair .chk{grid-column:5}
-  .row:hover .t{color:inherit}
-}
 </style>
 </head>
 <body>
@@ -441,11 +418,6 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
     <div><h2>제외 키워드</h2><p>공고명에 있으면 제외. 한 줄에 하나.</p><textarea id="kwExc"></textarea></div>
     <div class="act"><button class="btn p" id="btnSave">저장</button><button class="btn" id="btnReset2">기본값 복사해오기</button><button class="btn" id="btnClose">닫기</button><span class="msg" id="kwMsg"></span><span class="tokwrap" id="btnTok" hidden></span></div>
   </div></div>
-  <div id="tip" hidden><b>사용 안내</b>
-    <span>공고 줄을 누르면 <em>상세 정보</em>가 옆에 열립니다</span>
-    <span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg> 아이콘은 <em>나라장터 새 탭</em></span>
-    <span>☐ 체크하면 <em>관심 공고</em>에 모여 입찰공고 전환까지 추적</span>
-    <button id="tipX" title="닫기">알겠어요</button></div>
   <div class="list" id="list"></div>
 </main>
 <div id="dim"></div>
@@ -551,8 +523,10 @@ function rowHTML(n){
   const ddtxt=d===null?"—":d<0?(n.isPre?"대기":"마감"):"D-"+d;
   const [ch,cc]=CATC[n.category]||CATC["기타"];
   const amt=(n.estimated_price||n.budget)?`<b>${Math.round((n.estimated_price||n.budget)/1e6).toLocaleString()}</b>백만`:"";
-  const title=`<span class="t">${esc(n.title)}</span>`;
-  const url=n.isPre?preUrl(n):(n.url||"");
+  let title;
+  if(n.isPre)title=`<a class="t" href="${esc(preUrl(n))}" target="_blank" rel="noopener" title="나라장터 사전규격상세조회 열기">${esc(n.title)}</a>`;
+  else if(n.url)title=`<a class="t" href="${esc(n.url)}" target="_blank" rel="noopener">${esc(n.title)}</a>`;
+  else title=`<span class="t">${esc(n.title)}</span>`;
   const chk=n.isPre?`<label class="chk" title="관심 공고로 체크"><input type="checkbox" data-star="${esc(n.key)}" ${n.starred?"checked":""}><i></i></label>`:"";
   return `<div class="row${n.starred?' starred':''}" data-key="${esc(n.key)}">
     ${chk}<span class="pri ${cls}"><i></i><i></i><i></i></span>
@@ -568,7 +542,7 @@ function rowHTML(n){
       <span class="inst" title="${esc(instOf(n))}">${esc(shortInst(instOf(n)))}</span>
       <span class="amt">${amt}</span>
       <span class="date">${n.close_date?n.close_date.slice(5,10):""}</span>
-    </span><a class="ext" href="${esc(url)}" target="_blank" rel="noopener" title="나라장터에서 열기 (새 탭)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a><span class="chev" title="상세 보기">›</span></div>`;
+    </span></div>`;
 }
 
 /* 관심 공고: 사전규격 → 입찰공고 전환 단계별로 표시 */
@@ -591,7 +565,7 @@ function pairHTML(p){
       ${chk}<span class="pri ${cls}"><i></i><i></i><i></i></span>
       <span class="dd${d!==null&&d>=0&&d<=3?' u':''}">${ddtxt}</span>
       <span class="stg b">입찰공고</span>
-      <span class="t">${esc(b.title)}</span>
+      <a class="t" href="${esc(b.url)}" target="_blank" rel="noopener">${esc(b.title)}</a>
       <span class="right">
         ${fresh?'<span class="lbl new"><span class="dot" style="background:var(--acc)"></span>공고 전환</span>':''}
         ${(b.tags||"").split(",").filter(Boolean).map(t=>`<span class="lbl tag"><span class="dot" style="background:${TAGC[t]}"></span>${t}</span>`).join("")}
@@ -599,7 +573,7 @@ function pairHTML(p){
         <span class="inst" title="${esc(instOf(b))}">${esc(shortInst(instOf(b)))}</span>
         <span class="amt"><b>${money(b)}</b></span>
         <span class="date">${b.close_date?b.close_date.slice(5,10):""}</span>
-      </span><a class="ext" href="${esc(b.url||preUrl(p))}" target="_blank" rel="noopener" title="나라장터에서 열기 (새 탭)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a><span class="chev" title="상세 보기">›</span>
+      </span>
       <span class="sub">사전규격 ${esc(p.notice_no)} · ${p.notice_date?p.notice_date.slice(5,10):""} 등록 → 입찰공고 ${esc(b.notice_no)} · ${b.notice_date?b.notice_date.slice(5,10):""} 게시<span class="hint">${b.award_method?" · "+esc(b.award_method.split("-")[0]):""}</span></span>
     </div>`;
   }
@@ -608,13 +582,13 @@ function pairHTML(p){
     ${chk}<span class="pri lo"><i></i><i></i><i></i></span>
     <span class="dd">${d===null?"—":d<0?"대기":"D-"+d}</span>
     <span class="stg p">사전규격</span>
-    <span class="t">${esc(p.title)}</span>
+    <a class="t" href="${esc(preUrl(p))}" target="_blank" rel="noopener" title="나라장터 사전규격상세조회 열기">${esc(p.title)}</a>
     <span class="right">
       <span class="av" style="background:${cc}">${ch}</span>
       <span class="inst" title="${esc(instOf(p))}">${esc(shortInst(instOf(p)))}</span>
       <span class="amt"><b>${money(p)}</b></span>
       <span class="date">${p.close_date?p.close_date.slice(5,10):""}</span>
-    </span><a class="ext" href="${esc(preUrl(p))}" target="_blank" rel="noopener" title="나라장터에서 열기 (새 탭)"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 4h6v6M20 4 10 14M18 13v6a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h6"/></svg></a><span class="chev" title="상세 보기">›</span>
+    </span>
     <span class="sub">${esc(p.notice_no)} · ${p.notice_date?p.notice_date.slice(5,10):""} 등록 · ${wait}<span class="hint"> · 정식 입찰공고가 올라오면 자동으로 여기 표시됩니다</span></span>
   </div>`;
 }
@@ -764,9 +738,7 @@ function openDetail(key){
   $("dtl").classList.add("open");$("dim").classList.add("open");$("dtl").setAttribute("aria-hidden","false");
 }
 function closeDetail(){$("dtl").classList.remove("open");$("dim").classList.remove("open");$("dtl").setAttribute("aria-hidden","true");}
-$("dClose").onclick=closeDetail;
-if(!load("bidmon.tip1",false))$("tip").hidden=false;
-$("tipX").onclick=()=>{$("tip").hidden=true;save("bidmon.tip1",true);};$("dim").onclick=closeDetail;
+$("dClose").onclick=closeDetail;$("dim").onclick=closeDetail;
 document.addEventListener("keydown",e=>{if(e.key==="Escape")closeDetail();});
 $("dBody").addEventListener("click",e=>{
   const c=e.target.closest("[data-copyno]");if(c){navigator.clipboard&&navigator.clipboard.writeText(c.dataset.copyno).catch(()=>{});c.innerHTML=svgCopy+"복사됨";return;}
@@ -851,8 +823,9 @@ $("btnXls").onclick=exportXlsx;
 
 document.addEventListener("click",e=>{
   const row=e.target.closest(".row[data-key]");
-  // 행 어디를 눌러도 상세 패널. 나라장터 새 탭은 행 끝 ↗ 아이콘(또는 패널 안 버튼)
-  if(row&&!e.target.closest("a,label,input,button")){openDetail(row.dataset.key);return;}
+  const isApp=getComputedStyle($("tabbar")).display!=="none";
+  // PC: 제목 클릭 = 나라장터, 행의 나머지 = 상세 패널 / 앱(모바일·태블릿): 제목도 상세 패널 (나라장터는 패널 안 버튼으로)
+  if(row&&(!e.target.closest("a,label,input,button")||(isApp&&e.target.closest("a.t")))){e.preventDefault();openDetail(row.dataset.key);return;}
   const b=e.target.closest("button");
   if(b&&b.dataset.page!==undefined){PAGE=+b.dataset.page;render();return;}
   if(b&&b.dataset.src!==undefined){S.src=b.dataset.src;save(LS_S,S);fillKw();judgeAll();update();return;}
