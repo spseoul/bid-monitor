@@ -1112,6 +1112,7 @@ async function acShow(t){
         <div><span>등록된 부서</span>${regDepts.length?esc(regDepts.join(", ")):'<span class="st-no">없음 — [부서 관리]에서 등록</span>'}</div>
         <div><span>잠금 적용</span>${M_LOCKED?okx(true,"적용 중 — 로그인 필요"):'<span class="st-no">미적용'+(regDepts.length?" — 부서는 등록됨, 수집이 돌면 켜짐 (PC run_hidden.vbs)":"")+'</span>'}</div>
         <div><span>현재 접속</span>${ACCESS?esc(ACCESS.dept)+" 부서로 로그인":"잠금 없음 (로그인 안 함)"}</div>
+        <div><span>시스템 알림</span>${SYS_LOG.length?SYS_LOG.slice(-5).map(([t,m])=>`<div class="st-no" style="font-weight:400">${t} · ${esc(m)}</div>`).join(""):'<span class="st-ok">이상 없음</span>'}</div>
       </div></section>
       <section class="ssec"><h3>바로가기</h3><div class="acq">
         <button class="btn" data-go="depts">부서 추가·비밀번호 변경</button><button class="btn" data-go="watch">부서별 관심 공고 보기</button><button class="btn" data-go="kw">회사 기본 키워드 수정</button><button class="btn" data-go="sys">GitHub 연결 · 관리자 비밀번호</button>
@@ -1502,12 +1503,12 @@ async function loadDeptState(){
   try{
     let state;
     try{({state}=await fetchState(ACCESS.dept));}
-    catch(e){if(e.message==="STATE_UNREADABLE"){state={kw:null,star:{},updated:""};toast("이전 부서 설정을 읽을 수 없어 새로 시작합니다 (키 변경)",5000);}else throw e;}
+    catch(e){if(e.message==="STATE_UNREADABLE"){state={kw:null,star:{},updated:""};sysNote("부서 설정 파일을 현재 키로 읽을 수 없어 빈 상태로 시작 (저장하면 새 키로 다시 기록됨)");}else throw e;}
     DSTATE=state; DEPTKW=state.kw||null;
     STAR=Object.assign({},state.star||{});      // 부서 공용 관심 공고가 이 기기의 목록을 대신함
     save(LS_STAR,STAR);
     if(!load(LS_S,null)||!load(LS_S,{}).srcSet){S.src=DEPTKW?"dept":"default";}
-  }catch(e){console.warn("부서 상태 불러오기 실패",e);DSTATE=null;toast("부서 공유 설정을 불러오지 못했습니다: "+(e.message||e),6000);}
+  }catch(e){DSTATE=null;sysNote("부서 공유 설정을 불러오지 못함: "+(e.message||e));}
 }
 let _saving=null;
 async function saveDeptState(mutate,label){
@@ -1525,8 +1526,11 @@ async function saveDeptState(mutate,label){
       last=put.status; if(put.status!==409&&put.status!==422)break; await new Promise(r=>setTimeout(r,600));
     }
     throw new Error("HTTP "+last);
-  }catch(e){t.err(label+" 저장 실패 — 이 기기에만 저장됨 ("+(e.message||e)+")");return false;}
+  }catch(e){t.ok(label+" 저장됨");sysNote(label+" 부서 공유 저장 실패 — 이 기기에만 저장됨 ("+(e.message||e)+")");return false;}
 }
+/* 시스템 알림: 일반 사용자에게는 띄우지 않고 기록만, 관리자에게만 표시 */
+const SYS_LOG=[];
+function sysNote(msg){SYS_LOG.push([new Date().toTimeString().slice(0,5),msg]);console.warn("[bidmon]",msg);if(ADMIN)toast(msg,6000).err(msg);}
 /* 작은 알림 */
 function toast(msg,ms=2500){
   let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";document.body.appendChild(el);}
