@@ -510,11 +510,11 @@ function judgeAll(){
   });
 }
 
-function base(n){
+function base(n,v=S.view){
   if(S.cat&&n.category!==S.cat)return false;
   if(S.kind==="pre"&&!n.isPre)return false;
   if(S.kind==="bid"&&n.isPre)return false;
-  if(S.open&&n.dd!==null&&n.dd<0&&!(n.starred&&S.view==="matched")&&!preAlive(n))return false;   // 관심 공고에서는 체크한 공고를 마감돼도 유지('마감·종료' 그룹)
+  if(S.open&&n.dd!==null&&n.dd<0&&!(n.starred&&v==="matched")&&!preAlive(n))return false;   // 관심 공고에서는 체크한 공고를 마감돼도 유지('마감·종료' 그룹)
   if(S.q){const q=norm(S.q).toLowerCase();if(!norm(n.title+" "+(n.institution||"")+" "+(n.demand_institution||"")).toLowerCase().includes(q))return false;}
   return true;
 }
@@ -529,8 +529,8 @@ function inView(n,v){
 const hasTag=(n,t)=>!t||(n.tags||"").split(",").includes(t);
 
 function counts(){
-  const b=DATA.filter(base);
-  for(const v of Object.keys(VIEWS))$("n-"+v).textContent=b.filter(n=>inView(n,v)&&hasTag(n,S.tag)).length.toLocaleString();
+  for(const v of Object.keys(VIEWS))$("n-"+v).textContent=DATA.filter(n=>base(n,v)&&inView(n,v)&&hasTag(n,S.tag)).length.toLocaleString();   // 메뉴별 건수는 각 메뉴 기준으로 (관심 공고는 마감된 체크 공고 포함)
+  const b=DATA.filter(n=>base(n));
   for(const t of ["LH","GH","IH","SH"])$("n-"+t).textContent=b.filter(n=>inView(n,S.view)&&hasTag(n,t)).length||"";
   $("total").textContent=DATA.length.toLocaleString();
 }
