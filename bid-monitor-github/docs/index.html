@@ -988,12 +988,13 @@ async function sealKek(pw){
   return {salt:b64e(salt),kek_enc:b64e(enc),updated:new Date().toISOString().slice(0,10)};
 }
 /* 즉시 적용: 관리자 브라우저가 가진 데이터 열쇠를 새 부서 비밀번호로 감싸 meta.json 에 바로 반영 (수집을 기다리지 않음) */
-async function wrapWith(pw,salt,rawDk,tok){
+async function wrapWith(pw,salt,rawDk,tok,rawSk){
   const kekRaw=await deriveKey(pw,salt,200000);
   const kek=await crypto.subtle.importKey("raw",kekRaw,"AES-GCM",false,["encrypt"]);
   const iv=crypto.getRandomValues(new Uint8Array(12));
   const out={salt:b64e(salt),iv:b64e(iv),ct:b64e(await crypto.subtle.encrypt({name:"AES-GCM",iv},kek,rawDk))};
   if(tok){const tiv=crypto.getRandomValues(new Uint8Array(12));out.tok={iv:b64e(tiv),ct:b64e(await crypto.subtle.encrypt({name:"AES-GCM",iv:tiv},kek,new TextEncoder().encode(tok)))};}
+  if(rawSk){const siv=crypto.getRandomValues(new Uint8Array(12));out.sk={iv:b64e(siv),ct:b64e(await crypto.subtle.encrypt({name:"AES-GCM",iv:siv},kek,rawSk))};}
   return out;
 }
 async function putDocsFile(path,contentStr,msg){
@@ -1011,6 +1012,10 @@ async function applyAccessNow(change){   // change: {add:{dept,pw}} | {del:dept}
   try{
     const m=META_OBJ||{};const tok=(ACCESS&&ACCESS.tok)||TOKEN||"";
     let rawDk, keys, extra={};
+    let rawSk=ACCESS&&ACCESS.skey?await crypto.subtle.exportKey("raw",ACCESS.skey):null;
+    let skEnc=(m.access&&m.access.state_key_enc)||"";
+    if(!rawSk){rawSk=crypto.getRandomValues(new Uint8Array(32)).buffer;skEnc="";}
+    if(!skEnc&&ACCESS_PUB){const pub=await crypto.subtle.importKey("spki",b64d(ACCESS_PUB),{name:"RSA-OAEP",hash:"SHA-256"},false,["encrypt"]);skEnc=b64e(await crypto.subtle.encrypt({name:"RSA-OAEP"},pub,rawSk));}
     if(M_LOCKED&&ACCESS){ rawDk=await crypto.subtle.exportKey("raw",ACCESS.dkey); keys=Object.assign({},m.access.keys); }
     else{
       // 아직 잠기지 않은 사이트: 브라우저가 지금 데이터를 직접 암호화해 올림 (첫 부서 등록 시 1회)
@@ -1021,13 +1026,14 @@ async function applyAccessNow(change){   // change: {add:{dept,pw}} | {del:dept}
       const z=await new Response(cs.readable).arrayBuffer();
       const dkey=await crypto.subtle.importKey("raw",rawDk,"AES-GCM",false,["encrypt"]);const iv=crypto.getRandomValues(new Uint8Array(12));
       const ct=await crypto.subtle.encrypt({name:"AES-GCM",iv},dkey,z);
-      if(ADMIN&&PW){keys["관리자"]=await wrapWith(PW,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok);m.admin_dept="관리자";}
+      if(ADMIN&&PW){keys["관리자"]=await wrapWith(PW,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok,rawSk);m.admin_dept="관리자";}
       m.__blob={enc:"aes-gcm-v1",z:"deflate",iv:b64e(iv),ct:b64e(ct)};
     }
-    if(change.add){keys[change.add.dept]=await wrapWith(change.add.pw,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok);}
+    if(change.add){keys[change.add.dept]=await wrapWith(change.add.pw,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok,rawSk);}
     if(change.del){delete keys[change.del];}
-    if(!m.admin_dept&&ADMIN&&PW&&!keys["관리자"]){keys["관리자"]=await wrapWith(PW,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok);m.admin_dept="관리자";}
-    const access={iter:200000,keys};
+    if(!m.admin_dept&&ADMIN&&PW&&!keys["관리자"]){keys["관리자"]=await wrapWith(PW,crypto.getRandomValues(new Uint8Array(16)),rawDk,tok,rawSk);m.admin_dept="관리자";}
+    // 기존 부서 항목에 상태 키가 아직 없으면(구버전) 지금 ACCESS 로는 못 채움 — 그 부서는 비밀번호 변경 시 채워짐
+    const access={iter:200000,keys};if(skEnc)access.state_key_enc=skEnc;
     const meta=Object.assign({},m,{locked:true,depts:Object.keys(keys),access});delete meta.__blob;
     ["kw","config_head","admin_hash","github_repo","github_config_path","admin_token_enc"].forEach(k=>delete meta[k]);
     if(m.__blob){const blob=Object.assign({access},m.__blob);await putDocsFile("data.json",JSON.stringify(blob),"관리자: 접근 잠금 시작");}
@@ -1408,9 +1414,10 @@ async function unwrapDataKey(acc,dept,kekRaw){
   const kek=await crypto.subtle.importKey("raw",kekRaw,"AES-GCM",false,["decrypt"]);
   const dk=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(k.iv)},kek,b64d(k.ct));
   const dkey=await crypto.subtle.importKey("raw",dk,"AES-GCM",true,["encrypt","decrypt"]);   // 추출 가능: 관리자가 새 부서에 즉시 열쇠를 나눠주기 위해
-  let tok="";
+  let tok="",skey=null;
   if(k.tok){try{tok=new TextDecoder().decode(await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(k.tok.iv)},kek,b64d(k.tok.ct)));}catch(e){}}
-  return {dkey,tok};
+  if(k.sk){try{const raw=await crypto.subtle.decrypt({name:"AES-GCM",iv:b64d(k.sk.iv)},kek,b64d(k.sk.ct));skey=await crypto.subtle.importKey("raw",raw,"AES-GCM",true,["encrypt","decrypt"]);}catch(e){}}
+  return {dkey,tok,skey};
 }
 async function encryptBlob(obj,dkey){
   const iv=crypto.getRandomValues(new Uint8Array(12));
@@ -1453,11 +1460,11 @@ function showLock(m,msg){
         try{
           const kd=m.access.keys[dept];const salt=b64d(kd.salt||m.access.salt);
           const kek=await deriveKey(pw,salt,m.access.iter||200000);
-          const {dkey,tok}=await unwrapDataKey(m.access,dept,kek);
+          const {dkey,tok,skey}=await unwrapDataKey(m.access,dept,kek);
           if($("lkRemember").checked)save(LS_ACC,{dept,kek:b64e(kek)});else{try{sessionStorage.setItem(LS_ACC,JSON.stringify({dept,kek:b64e(kek)}));}catch(x){}}
           if(isAdm){ADMIN=true;PW=pw;}                       // 관리자 로그인: 잠금 해제 + 관리자 모드 동시에
           root.innerHTML='<div class="lk"><span class="logo"></span></div>';root.classList.add("boot");   // 데이터·부서 설정을 다 받을 때까지 로고 커버 유지
-          res({dept,dkey,tok});
+          res({dept,dkey,tok,skey});
         }catch(err){$("lkErr").textContent="비밀번호가 맞지 않습니다.";$("lkBtn").disabled=false;$("lkBtn").textContent="열기";$("lkPw").select();}
       };
     };
@@ -1468,7 +1475,7 @@ function showLock(m,msg){
 async function unlockDept(m){
   let saved=load(LS_ACC,null);if(!saved){try{saved=JSON.parse(sessionStorage.getItem(LS_ACC)||"null");}catch(e){}}
   if(saved&&saved.kek&&m.access.keys[saved.dept]){
-    try{const {dkey,tok}=await unwrapDataKey(m.access,saved.dept,b64d(saved.kek));return {dept:saved.dept,dkey,tok};}
+    try{const {dkey,tok,skey}=await unwrapDataKey(m.access,saved.dept,b64d(saved.kek));return {dept:saved.dept,dkey,tok,skey};}
     catch(e){localStorage.removeItem(LS_ACC);try{sessionStorage.removeItem(LS_ACC);}catch(x){}}
   }
   return showLock(m,saved?"비밀번호가 바뀌었습니다. 다시 입력해 주세요.":"");
@@ -1486,17 +1493,21 @@ async function fetchState(dept){
   const j=await r.json();
   const blob=JSON.parse(new TextDecoder().decode(b64d(j.content.replace(/\n/g,""))));
   if(!ACCESS||!ACCESS.dkey)throw new Error("잠금이 켜진 뒤(부서 로그인 후)에만 부서 상태를 읽을 수 있습니다");
-  return {sha:j.sha,state:await decryptBlob(blob,ACCESS.dkey)};
+  try{return {sha:j.sha,state:await decryptBlob(blob,ACCESS.skey||ACCESS.dkey)};}
+  catch(e){if(ACCESS.skey){try{return {sha:j.sha,state:await decryptBlob(blob,ACCESS.dkey)};}catch(e2){}}
+    const err=new Error("STATE_UNREADABLE");err.sha=j.sha;throw err;}
 }
 async function loadDeptState(){
   if(!ACCESS||!ACCESS.tok||!GH_REPO){DSTATE=null;return;}
   try{
-    const {state}=await fetchState(ACCESS.dept);
+    let state;
+    try{({state}=await fetchState(ACCESS.dept));}
+    catch(e){if(e.message==="STATE_UNREADABLE"){state={kw:null,star:{},updated:""};toast("이전 부서 설정을 읽을 수 없어 새로 시작합니다 (키 변경)",5000);}else throw e;}
     DSTATE=state; DEPTKW=state.kw||null;
     STAR=Object.assign({},state.star||{});      // 부서 공용 관심 공고가 이 기기의 목록을 대신함
     save(LS_STAR,STAR);
     if(!load(LS_S,null)||!load(LS_S,{}).srcSet){S.src=DEPTKW?"dept":"default";}
-  }catch(e){console.warn("부서 상태 불러오기 실패",e);DSTATE=null;}
+  }catch(e){console.warn("부서 상태 불러오기 실패",e);DSTATE=null;toast("부서 공유 설정을 불러오지 못했습니다: "+(e.message||e),6000);}
 }
 let _saving=null;
 async function saveDeptState(mutate,label){
@@ -1507,7 +1518,7 @@ async function saveDeptState(mutate,label){
     for(let i=0;i<3;i++){
       const {sha,state}=await fetchState(ACCESS.dept);
       mutate(state); state.updated=(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`)(new Date()); state.by=ACCESS.dept;
-      const blob=await encryptBlob(state,ACCESS.dkey);
+      const blob=await encryptBlob(state,ACCESS.skey||ACCESS.dkey);
       const put=await fetch(stateUrl(ACCESS.dept),{method:"PUT",headers:{...GH_H(),"Content-Type":"application/json"},
         body:JSON.stringify({message:`${ACCESS.dept} ${label}`,content:b64utf(JSON.stringify(blob)),sha,branch:"main"})});
       if(put.ok){DSTATE=state;t.ok(label+" 저장됨 (부서 공유)");return true;}
