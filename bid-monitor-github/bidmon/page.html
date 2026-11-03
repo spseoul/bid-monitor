@@ -612,7 +612,9 @@ function judgeAll(){
   for(const [k,o] of Object.entries(STAR)){if(!have.has(k)){const n=Object.assign({},o);judge(n);n.starred=true;n.orphan=true;DATA.push(n);have.add(k);}}
   // 체크한 사전규격 → 정식 입찰공고 연결 (1순위: 나라장터 사전규격번호, 2순위: 같은 제목)
   // 모든 사전규격 ↔ 입찰공고 연결: 1) 나라장터 사전규격번호  2) 괄호·[긴급] 등을 뗀 제목이 같음  3) 체크한 건은 제목 포함 관계까지
-  const clean=t=>norm(String(t||"").replace(/\([^)]*\)|\[[^\]]*\]|【[^】]*】|「[^」]*」/g,"").replace(/긴급|재공고|변경공고|장기계속|공고$/g,""));
+  // 제목 정규화: 괄호·꼬리표·계약방식·공모/용역 같은 일반어를 떼고 핵심만 남겨 비교 ("(설계공모)화도면 … 실시설계 용역" ↔ "화도면 … 실시설계용역(협상에 의한 계약)")
+  const clean=t=>norm(String(t||"").replace(/\([^)]*\)|\[[^\]]*\]|【[^】]*】|「[^」]*」/g,""))
+    .replace(/긴급|재공고|변경공고|정정공고|장기계속|협상에의한계약|수의계약|일반경쟁|제한경쟁|설계공모|제안공모|현상설계|공모|입찰|공고|용역|사업$/g,"");
   const byNo={},byC={},byT={};
   DATA.forEach(n=>{n.linked=false;n.bid=null;n.pre=null;if(n.isPre){byNo[n.notice_no]=n;const c=clean(n.title);if(c.length>=6)byC[c]=n;if(n.starred){const t=norm(n.title);if(t.length>=6)byT[t]=n;}}});
   const keys=Object.keys(byT);
@@ -824,7 +826,7 @@ function syncSrc(){
     $("pTitle").textContent=S.src==="mine"?"내 키워드":S.src==="dept"?dn+" 키워드":"회사 기본값";
     $("pDesc").textContent=S.src==="mine"?(MYKW?"이 브라우저에만 저장됩니다.":"아직 비어 있습니다. 직접 입력하거나 [기본값 복사해오기].")
       :S.src==="dept"?(DEPTKW?`${dn} 구성원 모두에게 적용됩니다 (저장 즉시 공유).`:"아직 비어 있습니다. 직접 입력하거나 [기본값 복사해오기]로 시작한 뒤 [저장].")
-      :DSTATE?"회사 공통 키워드입니다. 고쳐서 [저장]하면 "+dn+" 키워드로 저장됩니다 (회사 기본값은 [기본값 편집]에서만 변경).":"모두가 함께 쓰는 값입니다. 고치려면 [기본값 편집].";
+      :(!DEFAULT_KW.include.length?"⚠ 회사 기본값이 비어 있습니다 — 관리자가 [관리자 콘솔 › 회사 기본 키워드]에서 입력해야 공고가 분류됩니다.":DSTATE?"회사 공통 키워드입니다. 고쳐서 [저장]하면 "+dn+" 키워드로 저장됩니다 (회사 기본값은 [기본값 편집]에서만 변경).":"모두가 함께 쓰는 값입니다. 고치려면 [기본값 편집].");
     $("btnReset2").hidden=S.src==="default";
   }
 }
@@ -948,13 +950,18 @@ async function openDepts(target){
   try{
     const r=await fetch(`https://api.github.com/repos/${GH_REPO}/contents/docs/state?ref=main&t=`+Date.now(),{headers:GH_H(),cache:"no-store"});
     const files=r.ok?(await r.json()).filter(f=>f.name.endsWith(".json")):[];
+    const ADMD=(META_OBJ&&META_OBJ.admin_dept)||"관리자";
     const depts=(M_DEPTS||[]).slice();files.forEach(f=>{const d=decodeURIComponent(f.name.replace(/\.json$/,""));if(!depts.includes(d))depts.push(d);});
     let h="",total=0;
     for(const d of depts){
-      let st={kw:null,star:{}};try{st=(await fetchState(d)).state;}catch(e){}
+      let st={kw:null,star:{}},bad="";
+      if(ACCESS&&d===ACCESS.dept&&DSTATE)st=Object.assign({},DSTATE,{star:STAR});                 // 지금 로그인한 부서는 화면의 최신 상태 그대로
+      else{try{st=(await fetchState(d)).state;}catch(e){bad=e.message==="STATE_UNREADABLE"?"설정 파일을 현재 키로 읽을 수 없음 (해당 부서가 다시 저장하면 복구)":(e.message||"읽기 실패");}}
       const stars=Object.values(st.star||{});total+=stars.length;
+      if(d===ADMD&&!stars.length&&!st.kw)continue;                                             // 숨은 '관리자' 항목은 체크한 게 있을 때만 표시
       const live=stars.map(o=>DATA.find(n=>n.key===o.key)||Object.assign({orphan:true},o)).sort((a,b)=>((a.bid||a).dd??9e9)-((b.bid||b).dd??9e9));
       h+=`<section class="ssec"><h3><i style="background:var(--acc)"></i>${esc(d)}<span class="n">관심 ${stars.length}건 · 키워드 ${st.kw?st.kw.include.length+"개":"회사 기본값"}${st.updated?" · "+esc(st.updated)+" 갱신":""}</span></h3>
+        ${bad?`<div class="dmnote warn" style="margin-bottom:8px">${esc(bad)}</div>`:""}
         ${st.kw?`<div class="dvkw">${st.kw.include.map(k=>`<span>${esc(k)}</span>`).join("")}${st.kw.exclude.length?`<em>제외: ${esc(st.kw.exclude.join(", "))}</em>`:""}</div>`:""}
         <div class="scard">${live.length?live.map(n=>{const b=n.isPre?n.bid:null,m=b||n,dd=m.dd;return `<div class="sit" data-key="${esc(n.key)}">
           <div class="sdd ${dd==null?'x':dd<0?'x':dd<=6?'u':''}">${dd==null?"—":dd<0?(n.isPre&&!b?"대기":"마감"):"D-"+dd}</div>
@@ -1093,7 +1100,7 @@ $("acTabs").addEventListener("click",e=>{const b=e.target.closest("button[data-t
 const okx=(ok,t,f)=>`<span class="st-${ok?'ok':'no'}">${ok?t:f}</span>`;
 async function acShow(t){
   AC_TAB=t;document.querySelectorAll("#acTabs button").forEach(b=>b.classList.toggle("on",b.dataset.t===t));
-  const el=$("acBody");el.innerHTML='<div class="empty">불러오는 중…</div>';
+  const host=$("acBody");const el=document.createElement("div");el.innerHTML='<div class="empty">불러오는 중…</div>';host.replaceChildren(el);   // 탭을 빨리 바꿔도 이전 탭의 늦은 응답이 덮어쓰지 않음
   if(t==="home"){
     let depts=M_DEPTS||[],acc={depts:{}};
     if(mgrTok()&&GH_REPO){try{acc=(await readAccessFile()).doc;}catch(e){}}
@@ -1112,6 +1119,7 @@ async function acShow(t){
         <div><span>등록된 부서</span>${regDepts.length?esc(regDepts.join(", ")):'<span class="st-no">없음 — [부서 관리]에서 등록</span>'}</div>
         <div><span>잠금 적용</span>${M_LOCKED?okx(true,"적용 중 — 로그인 필요"):'<span class="st-no">미적용'+(regDepts.length?" — 부서는 등록됨, 수집이 돌면 켜짐 (PC run_hidden.vbs)":"")+'</span>'}</div>
         <div><span>현재 접속</span>${ACCESS?esc(ACCESS.dept)+" 부서로 로그인":"잠금 없음 (로그인 안 함)"}</div>
+        <div><span>시스템 알림</span>${SYS_LOG.length?SYS_LOG.slice(-5).map(([t,m])=>`<div class="st-no" style="font-weight:400">${t} · ${esc(m)}</div>`).join(""):'<span class="st-ok">이상 없음</span>'}</div>
       </div></section>
       <section class="ssec"><h3>바로가기</h3><div class="acq">
         <button class="btn" data-go="depts">부서 추가·비밀번호 변경</button><button class="btn" data-go="watch">부서별 관심 공고 보기</button><button class="btn" data-go="kw">회사 기본 키워드 수정</button><button class="btn" data-go="sys">GitHub 연결 · 관리자 비밀번호</button>
@@ -1500,14 +1508,20 @@ async function fetchState(dept){
 async function loadDeptState(){
   if(!ACCESS||!ACCESS.tok||!GH_REPO){DSTATE=null;return;}
   try{
-    let state;
+    let state,unreadable=false;
     try{({state}=await fetchState(ACCESS.dept));}
-    catch(e){if(e.message==="STATE_UNREADABLE"){state={kw:null,star:{},updated:""};toast("이전 부서 설정을 읽을 수 없어 새로 시작합니다 (키 변경)",5000);}else throw e;}
+    catch(e){if(e.message==="STATE_UNREADABLE"){state={kw:null,star:{},updated:""};unreadable=true;sysNote("부서 설정 파일을 현재 키로 읽을 수 없음 — 이 기기의 사본으로 복구합니다");}else throw e;}
+    // 이 기기에 남겨 둔 사본(마지막으로 공유 저장한 부서 키워드·관심 공고)으로 복구: 서버 파일이 비었거나 못 읽을 때
+    const LKW="bidmon.deptkw."+ACCESS.dept, localKw=load(LKW,null), localStar=load(LS_STAR,{});
+    let restore=null;
+    if(!state.kw&&localKw&&(localKw.include.length||localKw.exclude.length)){state.kw=localKw;restore="부서 키워드";}
+    if(unreadable&&Object.keys(localStar).length){state.star=Object.assign({},localStar,state.star||{});restore=restore?restore+"·관심 공고":"관심 공고";}
     DSTATE=state; DEPTKW=state.kw||null;
     STAR=Object.assign({},state.star||{});      // 부서 공용 관심 공고가 이 기기의 목록을 대신함
     save(LS_STAR,STAR);
+    if(restore){const kw=state.kw,st=state.star;setTimeout(()=>saveDeptState(x=>{if(kw)x.kw=kw;x.star=Object.assign({},x.star||{},st||{});},restore+" 복구"),800);}
     if(!load(LS_S,null)||!load(LS_S,{}).srcSet){S.src=DEPTKW?"dept":"default";}
-  }catch(e){console.warn("부서 상태 불러오기 실패",e);DSTATE=null;toast("부서 공유 설정을 불러오지 못했습니다: "+(e.message||e),6000);}
+  }catch(e){DSTATE=null;sysNote("부서 공유 설정을 불러오지 못함: "+(e.message||e));}
 }
 let _saving=null;
 async function saveDeptState(mutate,label){
@@ -1521,12 +1535,16 @@ async function saveDeptState(mutate,label){
       const blob=await encryptBlob(state,ACCESS.skey||ACCESS.dkey);
       const put=await fetch(stateUrl(ACCESS.dept),{method:"PUT",headers:{...GH_H(),"Content-Type":"application/json"},
         body:JSON.stringify({message:`${ACCESS.dept} ${label}`,content:b64utf(JSON.stringify(blob)),sha,branch:"main"})});
-      if(put.ok){DSTATE=state;t.ok(label+" 저장됨 (부서 공유)");return true;}
+      if(put.ok){DSTATE=state;if(state.kw)save("bidmon.deptkw."+ACCESS.dept,state.kw);t.ok(label+" 저장됨 (부서 공유)");return true;}
       last=put.status; if(put.status!==409&&put.status!==422)break; await new Promise(r=>setTimeout(r,600));
     }
     throw new Error("HTTP "+last);
-  }catch(e){t.err(label+" 저장 실패 — 이 기기에만 저장됨 ("+(e.message||e)+")");return false;}
+  }catch(e){const m=/401|403/.test(String(e.message))?"저장 권한(토큰) 문제 — 관리자에게 문의":/404/.test(String(e.message))?"저장소 경로를 찾을 수 없음":(e.message||e);
+    t.err(label+" 공유 저장 실패: "+m+" — 다른 기기에서는 반영되지 않습니다");sysNote(label+" 부서 공유 저장 실패 ("+(e.message||e)+")");return false;}
 }
+/* 시스템 알림: 일반 사용자에게는 띄우지 않고 기록만, 관리자에게만 표시 */
+const SYS_LOG=[];
+function sysNote(msg){SYS_LOG.push([new Date().toTimeString().slice(0,5),msg]);console.warn("[bidmon]",msg);if(ADMIN)toast(msg,6000).err(msg);}
 /* 작은 알림 */
 function toast(msg,ms=2500){
   let el=$("toast");if(!el){el=document.createElement("div");el.id="toast";document.body.appendChild(el);}
