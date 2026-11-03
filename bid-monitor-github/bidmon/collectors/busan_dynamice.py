@@ -4,6 +4,7 @@
 각 글은 사업장(조합) 게시판으로 연결: /home/<BARA_id>/view.do?no=329&pgMode=view&ntt_id=<id>
 """
 import logging
+import json
 import re
 import time
 from datetime import datetime, timedelta
@@ -14,6 +15,7 @@ from ..models import Notice
 from .base import BaseCollector
 from .lh import _make_session, _text
 from .seoul_cleanup import SKIP, _date, _close
+from ..attach import find_deadline, deadline_from_attachments
 
 log = logging.getLogger(__name__)
 
@@ -75,6 +77,16 @@ class BusanDynamiceCollector(BaseCollector):
                         hh += 12
                     out["close"] = f"{y}-{int(mo):02d}-{int(d):02d} {hh:02d}:{int(mi or 0):02d}"
                     break
+            if not out.get("close"):
+                out["close"] = find_deadline(body)
+            # 본문에 없으면 첨부 공고문(pdf/hwp)에서 — 조합 공고는 첨부만 올리는 경우가 많음
+            links = [f"{BASE}/cmm/fms/FileDown.do?atchFileId={a}&fileSn={b}"
+                     for a, b in re.findall(r"fn_egov_downFile\('([^']+)',\s*'(\d+)'\)", h)]
+            names = re.findall(r"fn_egov_downFile\([^)]*\)[^>]*>\s*([^<]{2,120}?\.(?:hwpx?|pdf|zip|xlsx?|docx?))", h, re.I)
+            if links:
+                out["files"] = json.dumps([{"name": (names[i].strip() if i < len(names) else f"첨부{i+1}"), "url": u} for i, u in enumerate(links)], ensure_ascii=False)
+            if not out.get("close"):
+                out["close"] = deadline_from_attachments(self.sess, links)
         except Exception as e:
             log.debug("busan 상세 실패 %s: %s", url, e)
         return out
@@ -108,7 +120,7 @@ class BusanDynamiceCollector(BaseCollector):
                     source="busan_dynamice", notice_no=m.group("id"), ord="00", title=title,
                     institution=det.get("site") or "부산 정비사업조합", demand_institution="부산 정비사업 통합홈페이지",
                     notice_date=(nd + " 00:00") if nd else "",
-                    close_date=det.get("close", ""),
+                    close_date=det.get("close", ""), files=det.get("files", ""),
                     notice_kind="조합입찰", url=url,
                 )
             log.info("busan_dynamice p%d: %d건 (누적 %d)", p, len(items), len(out))

@@ -47,6 +47,20 @@ def _fmt_dt(v: str) -> str:
     return v[:16]
 
 
+
+def _files_of(it: dict) -> str:
+    """나라장터 첨부: ntceSpecDocUrl1~10 + ntceSpecFileNm1~10, stdNtceDocUrl(표준공고서) → JSON 목록"""
+    out = []
+    for i in range(1, 11):
+        u = str(it.get(f"ntceSpecDocUrl{i}") or "").strip()
+        if u:
+            out.append({"name": str(it.get(f"ntceSpecFileNm{i}") or "").strip() or f"첨부{i}", "url": u})
+    u = str(it.get("stdNtceDocUrl") or "").strip()
+    if u:
+        out.append({"name": "표준공고서", "url": u})
+    return json.dumps(out, ensure_ascii=False) if out else ""
+
+
 class G2BCollector(BaseCollector):
     name = "g2b"
 
@@ -143,6 +157,7 @@ class G2BCollector(BaseCollector):
             notice_kind=str(it.get("ntceKindNm", "")),
             service_div=str(it.get("srvceDivNm", "")),
             prespec_no=str(it.get("bfSpecRgstNo") or "").strip(),
+            files=_files_of(it),
             url=url,
             raw=json.dumps(it, ensure_ascii=False),
         )

@@ -32,7 +32,8 @@ SEEN = DOCS / "seen.json"
 DATAF = DOCS / "data.json"
 STATIC = ROOT / "bidmon" / "static"      # sw.js, manifest, 아이콘 → docs/ 로 복사
 KEEP = ["key", "notice_no", "title", "institution", "demand_institution", "notice_date", "close_date",
-        "estimated_price", "budget", "award_method", "notice_kind", "url", "tags", "category", "prespec_no", "service_div"]
+        "estimated_price", "budget", "award_method", "notice_kind", "url", "tags", "category", "prespec_no", "service_div",
+        "files", "info", "info_tried"]
 
 
 from bidmon import secure
@@ -86,6 +87,51 @@ def load_previous() -> dict[str, dict]:
     return {r["key"]: r for r in rows if r.get("key")}
 
 
+
+def enrich_info(prev: dict, cfg: dict, today: str) -> None:
+    """관심 키워드에 맞는 최근 공고의 첨부 공고문을 내려받아 상세(요약·세부일정·심사위원·대지·연면적)를 추출 → row["info"]
+    매 수집마다 최대 BIDMON_INFO_MAX(기본 25)건만 처리해 시간이 늘지 않게 함. 실패한 공고는 info_tried 에 날짜를 적어 3일 뒤 재시도"""
+    from bidmon.attach import info_from_attachments
+    from bidmon.filters import apply_keyword_filter
+    from bidmon.models import Notice
+    import requests
+    limit = int(os.getenv("BIDMON_INFO_MAX", "25") or 25)
+    inc, exc = cfg["filters"]["include_keywords"], cfg["filters"]["exclude_keywords"]
+    recent = (now_kst() - timedelta(days=12)).strftime("%Y-%m-%d")
+    retry = (now_kst() - timedelta(days=3)).strftime("%Y-%m-%d")
+    todo = []
+    for r in prev.values():
+        if r.get("info") or not r.get("files") or (r.get("first_seen") or "") < recent:
+            continue
+        if (r.get("info_tried") or "") > retry:
+            continue
+        n = Notice(source="x", notice_no="x", title=r.get("title") or "")
+        apply_keyword_filter(n, inc, exc)
+        if n.matched:
+            todo.append(r)
+    todo.sort(key=lambda r: r.get("notice_date") or "", reverse=True)
+    if not todo:
+        return
+    sess = requests.Session()
+    sess.headers["User-Agent"] = "Mozilla/5.0 (Windows NT 10.0; Win64; x64) bidmon/1.0"
+    done = 0
+    for r in todo[:limit]:
+        try:
+            files = json.loads(r["files"])
+            info = info_from_attachments(sess, files)
+        except Exception as e:
+            log.debug("info 추출 실패 %s: %s", r.get("key"), e)
+            info = {}
+        r["info_tried"] = today
+        if info:
+            if not r.get("close_date") and info.get("deadline"):
+                r["close_date"] = info["deadline"]
+            info.pop("deadline", None)
+            r["info"] = json.dumps(info, ensure_ascii=False)
+            done += 1
+    log.info("공고문 상세 추출: 대상 %d건 중 %d건 처리, %d건 성공", len(todo), min(len(todo), limit), done)
+
+
 def main():
     cfg = load_config()
     keep_days = int(cfg.get("lookback_days", 30))
@@ -137,13 +183,16 @@ def main():
     for n in notices:
         tag_institutions(n, cfg["institutions"])
         categorize(n)
-        d = {k: getattr(n, k) for k in KEEP}
+        d = {k: getattr(n, k, "") for k in KEEP}
         old = prev.get(n.key) or {}
-        for k in ("notice_date", "close_date", "estimated_price", "budget", "demand_institution", "prespec_no", "service_div"):
+        for k in ("notice_date", "close_date", "estimated_price", "budget", "demand_institution", "prespec_no", "service_div",
+                  "files", "info", "info_tried"):
             if not d.get(k) and old.get(k):  # 이번에 비어 있으면 이전 값 유지 (LH 상세 생략 시)
                 d[k] = old[k]
         d["first_seen"] = seen.setdefault(n.key, today)
         prev[n.key] = d          # 새 정보로 덮어씀 (변경공고 반영)
+
+    enrich_info(prev, cfg, today)
 
     cutoff = (now_kst() - timedelta(days=keep_days)).strftime("%Y-%m-%d")
     today_s = now_kst().strftime("%Y-%m-%d")
@@ -192,6 +241,10 @@ def main():
         payload = {"data": data, **{k: meta[k] for k in secret_keys}}
         # 부서 상태(관심 공고·부서 키워드)를 저장소 docs/state/<부서>.json 에 쓰기 위한 토큰도 부서 비밀번호로 감싸 둠
         tok = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
+        m_tok = re.search(r"(github_pat_[A-Za-z0-9_]{20,}|gh[pousr]_[A-Za-z0-9]{20,})", tok)   # .env 따옴표 누락 등으로 다른 내용이 섞여도 토큰만
+        if tok and not m_tok:
+            log.warning("GITHUB_TOKEN 값이 토큰 모양이 아닙니다 (.env 확인) — 부서 상태 저장이 동작하지 않을 수 있음")
+        tok = m_tok.group(1) if m_tok else tok
         state_key = secure.state_key_from_previous(PREV_ACCESS, priv)
         if not state_key:   # 개인키로 못 풀면 부서/관리자 비밀번호로 2차 복구 (PC·Actions 어느 쪽에서 빌드해도 같은 키 유지)
             state_key = secure.state_key_from_keys(PREV_ACCESS, {**secure.passwords_from_env(),

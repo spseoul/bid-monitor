@@ -6,6 +6,7 @@ LH 홈페이지 공모·공고 게시판 수집기
 'list_no=' 링크 + 행 안의 날짜' 만으로 파싱합니다.
 """
 import html as _html
+import json
 import logging
 import re
 import time
@@ -15,6 +16,7 @@ import requests
 
 from ..models import Notice
 from .base import BaseCollector
+from ..attach import find_deadline, deadline_from_attachments
 from .lh import _make_session, _text
 
 log = logging.getLogger(__name__)
@@ -96,18 +98,28 @@ class LHBoardCollector(BaseCollector):
             r = self.sess.get(url, timeout=(15, 60))
             if "charset" not in r.headers.get("content-type", ""):
                 r.encoding = r.apparent_encoding
-            t = _text(r.text)
-            # 접수/제출/마감 뒤에 나오는 기간의 끝 날짜
-            m = re.search(r"(?:접수|제출|응모|신청|등록)\s*(?:기간|기한|마감)?[^0-9]{0,20}(20\d{2}[.\-/]\s?\d{1,2}[.\-/]\s?\d{1,2})[^~∼-]{0,30}[~∼-]\s*(20\d{2}[.\-/]\s?\d{1,2}[.\-/]\s?\d{1,2})(?:\D{0,6}(\d{1,2}:\d{2}))?", t)
-            if m:
-                out["close_date"] = _date(m.group(2).replace(" ", "")) + (" " + m.group(3) if m.group(3) else " 18:00")
-            else:
-                m = re.search(r"(?:마감|접수기한|제출기한)[^0-9]{0,15}(20\d{2}[.\-/]\s?\d{1,2}[.\-/]\s?\d{1,2})(?:\D{0,6}(\d{1,2}:\d{2}))?", t)
-                if m:
-                    out["close_date"] = _date(m.group(1).replace(" ", "")) + (" " + m.group(2) if m.group(2) else " 18:00")
+            html_ = r.text
+            t = _text(html_)
             m = re.search(r"(?:등록일|작성일|게시일|공고일)[^0-9]{0,10}(20\d{2}[.\-/]\d{1,2}[.\-/]\d{1,2})", t)
             if m:
                 out["notice_date"] = _date(m.group(1))
+            # 첨부파일 목록 (사이트 상세의 [첨부] 탭용) — 항상 기록
+            links = []
+            for mm in re.finditer(r'href="(/boardDownload\.es\?[^"]*list_no=\d+[^"]*seq=(\d+))"', html_):
+                links.append((int(mm.group(2)), BASE + mm.group(1).replace("&amp;", "&")))
+            names = re.findall(r"([^\s<>\"]+\.(?:hwpx?|pdf|zip|xlsx?|docx?))\s*\(", t)   # "1.공고문.hwpx (69.5KB)"
+            links = sorted(set(links))
+            files = [{"name": names[i] if i < len(names) else f"첨부{i+1}", "url": u} for i, (_, u) in enumerate(links)]
+            if files:
+                out["files"] = json.dumps(files, ensure_ascii=False)
+            # 1) 본문 텍스트에서
+            dl = find_deadline(t)
+            # 2) 없으면 첨부 공고문(hwp/hwpx/pdf)에서 — LH는 본문에 "첨부파일 참조"만 적는 경우가 대부분
+            if not dl and files:
+                order = sorted(range(len(files)), key=lambda i: (0 if "공고" in files[i]["name"] else 1, i))
+                dl = deadline_from_attachments(self.sess, [files[i]["url"] for i in order])
+            if dl:
+                out["close_date"] = dl
         except Exception as e:
             log.debug("lh_board 상세 실패 %s: %s", url, e)
         return out
@@ -134,7 +146,7 @@ class LHBoardCollector(BaseCollector):
                         source="lh_board", notice_no=row["no"], ord="00", title=row["title"],
                         institution="한국토지주택공사", demand_institution=(row.get("dept") or "") + " (홈페이지 " + b.get("name", "") + ")",
                         notice_date=(nd + " 00:00") if (nd := det.get("notice_date") or row["date"]) else "",
-                        close_date=det.get("close_date", ""),
+                        close_date=det.get("close_date", ""), files=det.get("files", ""),
                         notice_kind=row.get("kind") or "공모·공고", url=row["url"],
                     )
                     out[n.key] = n

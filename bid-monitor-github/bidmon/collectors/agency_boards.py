@@ -7,6 +7,7 @@
   IH 인천도시공사은 홈페이지 입찰공고가 나라장터 링크뿐이라 별도 수집 불필요.
 """
 import logging
+import json
 import re
 import time
 from datetime import datetime, timedelta
@@ -17,6 +18,7 @@ from ..models import Notice
 from .base import BaseCollector
 from .lh import _make_session, _text
 from .seoul_cleanup import SKIP
+from ..attach import find_deadline, deadline_from_attachments
 
 log = logging.getLogger(__name__)
 
@@ -66,6 +68,29 @@ class _Board(BaseCollector):
     def _rows(self, page_no: int):  # → iterable of dict(no,title,date,url,dept)
         raise NotImplementedError
 
+    def _close(self, url: str) -> str:
+        """상세 본문 → 첨부 공고문 순으로 마감일시 탐색 (첨부 목록은 self._last_files 에 남김)"""
+        self._last_files = ""
+        try:
+            h = self._get(url)
+            base = re.match(r"https?://[^/]+", url).group(0)
+            files = []
+            for m in re.finditer(r'<a[^>]*href="([^"]*(?:[Dd]ownload|[Ff]ile[Dd]own|attach|atchFile)[^"]*)"[^>]*>(.*?)</a>', h, re.S):
+                u = m.group(1).replace("&amp;", "&")
+                u = u if u.startswith("http") else base + (u if u.startswith("/") else "/" + u)
+                nm = re.sub(r"<[^>]+>|\s+", " ", m.group(2)).strip()
+                if u not in [f["url"] for f in files]:
+                    files.append({"name": nm[:120] or f"첨부{len(files)+1}", "url": u})
+            if files:
+                self._last_files = json.dumps(files, ensure_ascii=False)
+            dl = find_deadline(_text(h))
+            if dl:
+                return dl
+            return deadline_from_attachments(self.sess, [f["url"] for f in files])
+        except Exception as e:
+            log.debug("%s 상세 실패 %s: %s", self.name, url, e)
+            return ""
+
     def collect(self, lookback_days: int) -> list[Notice]:
         cutoff = (datetime.now() - timedelta(days=max(lookback_days, self.min_days))).strftime("%Y-%m-%d")
         out: dict[str, Notice] = {}
@@ -84,6 +109,10 @@ class _Board(BaseCollector):
                            institution=self.inst, demand_institution=r.get("dept", ""),
                            notice_date=(r["date"] + " 00:00") if r["date"] else "",
                            notice_kind=self.kind, url=r["url"])
+                if n.key not in self.known:
+                    n.close_date = self._close(r["url"])
+                    n.files = getattr(self, "_last_files", "")
+                    time.sleep(0.3)
                 out[n.key] = n
             log.info("%s p%d: %d건 (누적 %d)", self.name, p, len(rows), len(out))
             if stop:
