@@ -1510,7 +1510,7 @@ async function loadDeptState(){
   try{
     let state,unreadable=false;
     try{({state}=await fetchState(ACCESS.dept));}
-    catch(e){if(e.message==="STATE_UNREADABLE"){state={kw:null,star:{},updated:""};unreadable=true;sysNote("부서 설정 파일을 현재 키로 읽을 수 없음 — 이 기기의 사본으로 복구합니다");}else throw e;}
+    catch(e){if(e.message==="STATE_UNREADABLE"){state={kw:null,star:{},updated:""};unreadable=true;console.warn("[bidmon] 부서 설정 파일이 옛 키로 쓰여 있어 현재 키로 다시 기록");}else throw e;}
     // 이 기기에 남겨 둔 사본(마지막으로 공유 저장한 부서 키워드·관심 공고)으로 복구: 서버 파일이 비었거나 못 읽을 때
     const LKW="bidmon.deptkw."+ACCESS.dept, localKw=load(LKW,null), localStar=load(LS_STAR,{});
     let restore=null;
@@ -1519,6 +1519,7 @@ async function loadDeptState(){
     DSTATE=state; DEPTKW=state.kw||null;
     STAR=Object.assign({},state.star||{});      // 부서 공용 관심 공고가 이 기기의 목록을 대신함
     save(LS_STAR,STAR);
+    if(unreadable&&!restore)restore="부서 설정";   // 못 읽는 옛 파일은 현재 키로 다시 써서 다음 접속부터 정상화
     if(restore){const kw=state.kw,st=state.star;setTimeout(()=>saveDeptState(x=>{if(kw)x.kw=kw;x.star=Object.assign({},x.star||{},st||{});},restore+" 복구"),800);}
     if(!load(LS_S,null)||!load(LS_S,{}).srcSet){S.src=DEPTKW?"dept":"default";}
   }catch(e){DSTATE=null;sysNote("부서 공유 설정을 불러오지 못함: "+(e.message||e));}
