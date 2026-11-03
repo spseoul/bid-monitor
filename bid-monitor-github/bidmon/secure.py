@@ -120,6 +120,29 @@ def state_key_from_previous(prev_access: dict | None, priv) -> bytes | None:
         return None
 
 
+def state_key_from_keys(prev_access: dict | None, passwords: dict[str, str], depts: dict[str, dict] | None = None) -> bytes | None:
+    """RSA 개인키가 없거나 맞지 않을 때의 2차 복구: 이전 access.keys[부서].sk 를 부서(또는 관리자) 비밀번호로 풀어 상태 키를 이어 씀"""
+    if not prev_access or not prev_access.get("keys"):
+        return None
+    AESGCM = _aes()
+    iters = int(prev_access.get("iter", ITER))
+    cands = dict(depts or {})
+    for dept, pw in (passwords or {}).items():
+        k = prev_access["keys"].get(dept)
+        if k and k.get("salt"):
+            cands[dept] = {"kek": derive(pw, _unb64(k["salt"]), iters), "salt": _unb64(k["salt"])}
+    for dept, d in cands.items():
+        k = prev_access["keys"].get(dept) or {}
+        sk = k.get("sk")
+        if not sk:
+            continue
+        try:
+            return AESGCM(d["kek"]).decrypt(_unb64(sk["iv"]), _unb64(sk["ct"]), None)
+        except Exception:
+            continue
+    return None
+
+
 def encrypt(payload: dict, depts: dict[str, dict], extra: dict | None = None,
             state_key: bytes | None = None, priv=None) -> tuple[dict, dict]:
     """depts: {부서: {"kek": 32바이트, "salt": 16바이트}}  (depts_from_passwords / depts_from_access_file 결과를 합친 것)
