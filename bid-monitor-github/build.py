@@ -193,6 +193,11 @@ def main():
         # 부서 상태(관심 공고·부서 키워드)를 저장소 docs/state/<부서>.json 에 쓰기 위한 토큰도 부서 비밀번호로 감싸 둠
         tok = os.getenv("GITHUB_TOKEN", "").strip() or os.getenv("GH_TOKEN", "").strip()
         state_key = secure.state_key_from_previous(PREV_ACCESS, priv)
+        if not state_key:   # 개인키로 못 풀면 부서/관리자 비밀번호로 2차 복구 (PC·Actions 어느 쪽에서 빌드해도 같은 키 유지)
+            state_key = secure.state_key_from_keys(PREV_ACCESS, {**secure.passwords_from_env(),
+                                                   **({"관리자": str(cfg["admin_password"])} if cfg.get("admin_password") else {})}, depts)
+            if state_key:
+                log.info("부서 상태 키를 이전 배포의 부서 키에서 복원")
         if not state_key:
             import secrets as _s
             state_key = _s.token_bytes(32)
