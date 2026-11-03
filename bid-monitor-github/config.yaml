@@ -42,12 +42,11 @@ institutions:
 filters:
   include_keywords:
     - 설계공모
-    - 건축설계
     - 지구단위계획
-    - 소규모주택
+    - 도시건축통합
     - 공공주택지구
-    - 기본계획
-    - 개발구상
+    - 소규모주택
     - 재정비사업
-    - 도시건축
+    - 도시재생
+    - 건축기본구상
   exclude_keywords:
