@@ -1530,7 +1530,10 @@ async function saveDeptState(mutate,label){
   try{
     let last="";
     for(let i=0;i<3;i++){
-      const {sha,state}=await fetchState(ACCESS.dept);
+      let sha,state;
+      try{({sha,state}=await fetchState(ACCESS.dept));}
+      catch(e){if(e.message!=="STATE_UNREADABLE")throw e;   // 옛 키로 쓰인 파일 → 현재 상태로 덮어씀
+        sha=e.sha;state=Object.assign({kw:null,star:{},updated:""},DSTATE||{});}
       mutate(state); state.updated=(d=>`${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")} ${String(d.getHours()).padStart(2,"0")}:${String(d.getMinutes()).padStart(2,"0")}`)(new Date()); state.by=ACCESS.dept;
       const blob=await encryptBlob(state,ACCESS.skey||ACCESS.dkey);
       const put=await fetch(stateUrl(ACCESS.dept),{method:"PUT",headers:{...GH_H(),"Content-Type":"application/json"},
