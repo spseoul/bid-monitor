@@ -20,7 +20,9 @@ def tag_institutions(n: Notice, institutions: dict[str, list[str]]) -> None:
 
 
 def apply_keyword_filter(n: Notice, include: list[str], exclude: list[str]) -> None:
-    title = n.title.replace(" ", "")
+    title = (n.title or "").replace(" ", "")
+    include = [k for k in (include or []) if k]      # config.yaml 에서 목록이 비어 있으면 None 으로 옴
+    exclude = [k for k in (exclude or []) if k]
     inc = [k for k in include if k.replace(" ", "") in title]
     exc = [k for k in exclude if k.replace(" ", "") in title]
     # 포함 키워드가 있고, 제외 키워드가 없으면 관심 공고
