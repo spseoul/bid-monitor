@@ -1,10 +1,17 @@
 name: 입찰공고 수집
 
+# PC 없이 GitHub 에서만 수집·배포합니다. 수동 실행: Actions 탭 → 입찰공고 수집 → Run workflow
 on:
   schedule:
-    - cron: "0 22 * * *"          # 매일 07:00 KST
-    - cron: "0 23,0,1,2,3,4,5,6,7,8,9 * * 1-5"   # 평일 08~18시 매시간 KST (한 번만 성공해도 됨)
+    - cron: "0 22 * * *"                          # 매일 07:00 KST
+    - cron: "5 23,0-9 * * 1-5"                    # 평일 08:05~18:05 KST 매시간
+    - cron: "5 1,5 * * 0,6"                       # 주말 10:05, 14:05 KST
   workflow_dispatch:
+    inputs:
+      days:
+        description: "수집 범위(일). 비우면 증분(3일). 처음 한 번은 30 권장"
+        required: false
+        default: ""
 
 permissions:
   contents: write
@@ -16,6 +23,7 @@ concurrency:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     defaults:
       run:
         working-directory: bid-monitor-github
@@ -24,27 +32,52 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.12"
+          cache: pip
+          cache-dependency-path: bid-monitor-github/requirements.txt
       - run: pip install -r requirements.txt
-      - name: 수집 (실패 시 5분 후 재시도, 최대 3회)
+
+      - name: 필수 비밀값 확인
+        env:
+          G2B: ${{ secrets.G2B_SERVICE_KEY }}
+          KEY: ${{ secrets.ACCESS_PRIVATE_KEY }}
+          TOK: ${{ secrets.STATE_TOKEN }}
+        run: |
+          [ -n "$G2B" ] || { echo "::error::Secret G2B_SERVICE_KEY 없음 (Settings → Secrets and variables → Actions)"; exit 1; }
+          [ -n "$KEY" ] || echo "::warning::Secret ACCESS_PRIVATE_KEY 없음 — 부서 잠금/관리자 [부서 관리]가 동작하지 않을 수 있음"
+          [ -n "$TOK" ] || echo "::warning::Secret STATE_TOKEN 없음 — 부서 관심공고·키워드 공유 저장이 꺼짐"
+
+      - name: 수집 (실패 시 3분 후 재시도, 최대 3회)
         env:
           G2B_SERVICE_KEY: ${{ secrets.G2B_SERVICE_KEY }}
-          ACCESS_PRIVATE_KEY: ${{ secrets.ACCESS_PRIVATE_KEY }}   # 부서 로그인 (make_keys.bat 로 만든 키)
-          GITHUB_TOKEN: ${{ secrets.STATE_TOKEN }}                 # 부서 관심공고 저장용 PAT (Contents: Read and write)
+          ACCESS_PRIVATE_KEY: ${{ secrets.ACCESS_PRIVATE_KEY }}
+          ACCESS_PASSWORDS: ${{ secrets.ACCESS_PASSWORDS }}
+          GITHUB_TOKEN: ${{ secrets.STATE_TOKEN }}
+          BIDMON_DAYS: ${{ github.event.inputs.days }}
           TZ: Asia/Seoul
         run: |
+          set -o pipefail
           for i in 1 2 3; do
-            if python build.py; then exit 0; fi
-            echo "::warning::수집 실패 ($i/3) — 5분 후 재시도"
-            sleep 300
+            if python build.py 2>&1 | tee /tmp/build.log && ! grep -q "수집 결과 0건" /tmp/build.log; then break; fi
+            echo "::warning::수집 실패 ($i/3) — 3분 후 재시도"
+            if [ $i -eq 3 ]; then echo "::error::3회 모두 실패. 이전 페이지 유지."; exit 1; fi
+            sleep 180
           done
-          echo "::error::3회 모두 실패. 이전 페이지 유지."
-          exit 1
+          {
+            echo "### 수집 결과"
+            grep -E "건|수집|WARNING|ERROR" /tmp/build.log | tail -40
+          } >> "$GITHUB_STEP_SUMMARY"
+
       - name: 페이지 복사 및 커밋
         run: |
           mkdir -p ../docs
-          for f in docs/*; do [ "$(basename "$f")" = "seen.json" ] || cp -r "$f" ../docs/; done   # 페이지·데이터·아이콘 전부 (seen.json 제외)
+          for f in docs/*; do [ "$(basename "$f")" = "seen.json" ] || cp -r "$f" ../docs/; done
           git config user.name "bid-bot"
           git config user.email "bid-bot@users.noreply.github.com"
           git add docs/ ../docs/
-          git diff --cached --quiet || git commit -m "공고 갱신 $(date +'%Y-%m-%d %H:%M')"
-          git push
+          if git diff --cached --quiet; then echo "변경 없음"; exit 0; fi
+          git commit -m "공고 갱신 $(date +'%Y-%m-%d %H:%M')"
+          for i in 1 2 3 4; do
+            git pull --rebase -X theirs origin "${GITHUB_REF_NAME}" && git push && exit 0
+            sleep 15
+          done
+          exit 1
