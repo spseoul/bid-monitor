@@ -96,7 +96,7 @@ def enrich_info(prev: dict, cfg: dict, today: str) -> None:
     from bidmon.models import Notice
     import requests
     limit = int(os.getenv("BIDMON_INFO_MAX", "25") or 25)
-    inc, exc = cfg["filters"]["include_keywords"], cfg["filters"]["exclude_keywords"]
+    inc, exc = cfg["filters"].get("include_keywords") or [], cfg["filters"].get("exclude_keywords") or []
     recent = (now_kst() - timedelta(days=12)).strftime("%Y-%m-%d")
     retry = (now_kst() - timedelta(days=3)).strftime("%Y-%m-%d")
     todo = []
@@ -204,7 +204,7 @@ def main():
     data.sort(key=lambda r: r["notice_date"] or "", reverse=True)
     seen = {k: v for k, v in seen.items() if v >= (now_kst() - timedelta(days=60)).strftime("%Y-%m-%d")}
 
-    kw = {"include": cfg["filters"]["include_keywords"], "exclude": cfg["filters"]["exclude_keywords"]}
+    kw = {"include": cfg["filters"].get("include_keywords") or [], "exclude": cfg["filters"].get("exclude_keywords") or []}
     # config.yaml 에서 filters 앞부분(주석·기타 설정)을 그대로 보존 → 관리자 모드에서 파일 재생성 시 사용
     raw = (ROOT / "config.yaml").read_text(encoding="utf-8")
     head = raw.split("filters:")[0] if "filters:" in raw else ""
