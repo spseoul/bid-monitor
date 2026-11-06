@@ -88,6 +88,9 @@ def load_previous() -> dict[str, dict]:
 
 
 
+INFO_VER = 2          # 공고문 추출 규칙 버전 — 올리면 최근 공고의 info 를 다시 추출
+
+
 def enrich_info(prev: dict, cfg: dict, today: str) -> None:
     """관심 키워드에 맞는 최근 공고의 첨부 공고문을 내려받아 상세(요약·세부일정·심사위원·대지·연면적)를 추출 → row["info"]
     매 수집마다 최대 BIDMON_INFO_MAX(기본 25)건만 처리해 시간이 늘지 않게 함. 실패한 공고는 info_tried 에 날짜를 적어 3일 뒤 재시도"""
@@ -101,8 +104,15 @@ def enrich_info(prev: dict, cfg: dict, today: str) -> None:
     retry = (now_kst() - timedelta(days=3)).strftime("%Y-%m-%d")
     todo = []
     for r in prev.values():
-        if r.get("info") or not r.get("files") or (r.get("first_seen") or "") < recent:
+        if not r.get("files") or (r.get("first_seen") or "") < recent:
             continue
+        if r.get("info"):
+            try:                      # 추출 규칙이 바뀐 뒤(INFO_VER) 만든 것이 아니면 다시 추출
+                if json.loads(r["info"]).get("v") == INFO_VER:
+                    continue
+            except Exception:
+                pass
+            r["info_tried"] = ""
         if (r.get("info_tried") or "") > retry:
             continue
         n = Notice(source="x", notice_no="x", title=r.get("title") or "")
@@ -124,6 +134,7 @@ def enrich_info(prev: dict, cfg: dict, today: str) -> None:
             info = {}
         r["info_tried"] = today
         if info:
+            info["v"] = INFO_VER
             if not r.get("close_date") and info.get("deadline"):
                 r["close_date"] = info["deadline"]
             info.pop("deadline", None)
