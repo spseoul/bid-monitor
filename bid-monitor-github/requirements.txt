@@ -4,3 +4,4 @@ pyyaml
 truststore
 olefile
 pypdf
+cryptography
