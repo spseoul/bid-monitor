@@ -3,8 +3,8 @@
 # ─────────────────────────────────────────────
 # 관리자 모드 비밀번호 (페이지에서 회사 기본값 파일을 만들 때 필요)
 # 주의: 이 값 자체는 페이지에 실리지 않고, 해시(되돌릴 수 없는 값)만 실립니다.
-admin_password: Tkvmf311^^
-admin_token_enc: gOgu4UTI3JjVJY539xqOpg==.KV1vGwtcfylrEwjR.aOlkk7gi37e5sbYtAhSGIvwcD2kGWdbH+9VgjvnaWLVmFwr3Glu7GJxUHacP3CGywIVLg3n1OYEgJJMVrqgZDlJyeJCkZ+LMBre4mxhunYMMpwUD0fJrUcfPimOGGnDIewMyTIE7zDZ6HpxPOA==
+admin_password: sps123
+admin_token_enc: TsO2SQjFhdiL3nuLa7HHpg==.J+kcQG+M6zSbZX6+.PLdVssTdxVrYNfYH9sKzlZC3EPxoVg0xI6o//HY5xtsM94438QHd8RsHaYGaUot+7XsVyOQQIJcQs7pdPn3QXodtE9tc1U8xFBM5Y7EKSXEJbtDSA/cMdBkGD79z3WsdGGDkX9zGr2CMVlIRHg==
 # 관리자 모드에서 이 파일을 직접 저장할 위치
 github_repo: spseoul/bid-monitor
 github_config_path: bid-monitor-github/config.yaml
@@ -52,3 +52,10 @@ filters:
     - 공간재구조화
     - 건축기본구상
   exclude_keywords:
+    - 폐기물
+    - 교통영향
+    - 안전조사
+    - 매장유산
+    - 소유권
+    - 온라인
+    - 해체공사
