@@ -199,32 +199,96 @@ def find_schedule(text: str) -> dict:
     return out
 
 
+_JURY_ROLE = r"(?:예\s*비\s*심사\s*위원|예\s*비\s*위원|예\s*비|심사\s*위원장|위원장|심사\s*위원|위원|부위원장|간사)"
+_JURY_HEAD = r"(?:심사\s*위원(?:회)?\s*(?:명단|구성|현황|위촉|명부)|심사\s*위원(?:회)?\s*(?:은|는)?\s*다음과\s*같)"
+_JURY_END = r"(?:※|제척|기피|회피|\d\s*[)）.]\s*[가-힣]|[가-힣]\.\s|\d+\.\d+\s|심사\s*방법|심사\s*기준|평가\s*방식|평가\s*항목|운영\s*방법|이상\s*\d+\s*(?:명|인))"
+_NOT_NAME = {"심사위원", "위원장", "위원", "성명", "소속", "직위", "구분", "비고", "예비", "본심", "후보", "명단", "다음과", "같음", "선정", "구성",
+             "번호", "순번", "연번", "직책", "직급", "분야", "전공", "소속기관", "기관명", "건축사", "교수", "대표", "이사", "부장", "팀장", "과장",
+             "공개", "추후", "별도", "비공개", "예정", "일원", "백만원", "포함", "이상", "이하", "미만", "등급", "인증", "명", "인"}
+_NAME_TOKEN = re.compile(r"^[가-힣]{2,4}$")
+
+
+def _jury_from_table(seg: str) -> list[dict]:
+    """표를 텍스트로 편 형태: '1 심사위원 삼육대학교 정광호 2 사이디엔씨 건축사사무소 이진희 … 1 예비 심사위원 OO공사 박성만'
+    → 번호 토큰으로 행을 끊고, 각 행의 마지막 이름꼴 토큰을 성명, 나머지를 소속으로"""
+    toks = seg.split()
+    rows, cur = [], None
+    for tk in toks:
+        if re.fullmatch(r"\d{1,2}", tk) and (cur is None or 1 <= int(tk) <= 30):
+            if cur: rows.append(cur)
+            cur = []
+        elif cur is not None:
+            cur.append(tk)
+    if cur: rows.append(cur)
+    members, reserve = [], False
+    for row in rows:
+        if not row: continue
+        line = " ".join(row)
+        role = ""
+        m = re.match(_JURY_ROLE, line)
+        if m:
+            role = re.sub(r"\s+", "", m.group(0)); line = line[m.end():].strip()
+        if role.startswith("예비"): reserve = True
+        elif role: reserve = False
+        line = re.sub(r"\s*[(（][^()（）]{0,40}[)）]", "", line)      # 괄호 설명 제거
+        parts = line.split()
+        # 성명: 뒤에서부터 이름꼴 토큰 (한글 2~4자, 소속 같은 말 제외). 그 뒤는 비고로 봄
+        ni = None
+        for i in range(len(parts) - 1, -1, -1):
+            w = parts[i]
+            if _NAME_TOKEN.match(w) and w not in _NOT_NAME and not re.search(r"(?:대학교|공사|공단|건설|사무소|연구원|연구소|협회|산업|센터|학과|시청|군청|구청|도청)$", w):
+                ni = i; break
+        if ni is None: continue
+        name = parts[ni]
+        org = " ".join(parts[:ni]).strip(" -·:")
+        if not org and members: org = ""
+        if reserve: role = "예비"
+        elif role in ("위원장", "심사위원장"): role = "위원장"
+        else: role = ""
+        if name in {x["name"] for x in members}: continue
+        d = {"name": name, "org": org}
+        if role: d["role"] = role
+        members.append(d)
+        if len(members) >= 20: break
+    return members
+
+
 def find_jury(text: str) -> dict:
-    """{'members': [{'name','org'}], 'note': '추후 공개' ...}  — 공고문에 심사위원 항목이 있을 때만"""
+    """{'members': [{'name','org','role'?}], 'note': '추후 공개' ...}  — 공고문에 심사위원 항목이 있을 때만"""
     t = re.sub(r"[ \t]+", " ", text or "")
-    m = re.search(r"심사\s*위원(?:회|단)?\s*(?:명단|구성|현황|소개)?", t)
-    if not m:
-        return {}
-    seg = t[m.start(): m.start() + 1500]
     out = {}
-    nm = re.search(_JURY_NOTE, seg[:400])
-    if nm:
-        out["note"] = re.sub(r"\s+", " ", nm.group(1))
-    members, seen = [], set()
-    for mm in re.finditer(_NAME + r"\s*" + _ORG, seg):
-        name, org = mm.group(1), mm.group(2).strip()
-        if name in _STOP_WORDS or any(w in name for w in ("위원", "심사", "소속")):
+    # 1) 명단 표: '심사위원회 명단' 머리말 뒤 ~ 다음 절 전까지
+    for m in re.finditer(_JURY_HEAD, t):
+        seg = t[m.end(): m.end() + 2500]
+        e = re.search(_JURY_END, seg[40:])
+        if e: seg = seg[:40 + e.start()]
+        seg = re.sub(r"^\s*(?:번\s*호|순\s*번|연\s*번|구\s*분|소\s*속|성\s*명|직\s*위|직\s*책|분\s*야|비\s*고|\s)+", " ", seg)
+        if not re.search(r"(?:번\s*호|순\s*번|연\s*번|성\s*명|소\s*속)", t[m.end(): m.end() + 120]) and not re.search(r"\b1\s", seg[:80]):
             continue
-        if re.search(r"\d{4}|㎡|원$|억|만", org):           # 괄호 안이 금액·면적·연도면 사람 아님
-            continue
-        if name not in seen:
-            seen.add(name); members.append({"name": name, "org": org})
-        if len(members) >= 15:
+        members = _jury_from_table(seg)
+        if len(members) >= 2:
+            out["members"] = members
             break
-    if members:
-        out["members"] = members
-    if not out:
-        return {}
+    # 2) '홍길동(OO대학교)' 꼴
+    if "members" not in out:
+        m = re.search(r"심사\s*위원(?:회|단)?\s*(?:명단|구성|현황|소개)?", t)
+        if not m: return {}
+        seg = t[m.start(): m.start() + 1500]
+        members, seen = [], set()
+        for mm in re.finditer(_NAME + r"\s*" + _ORG, seg):
+            name, org = mm.group(1), mm.group(2).strip()
+            if name in _NOT_NAME or any(w in name for w in ("위원", "심사", "소속")): continue
+            if re.search(r"\d{4}|㎡|원$|억|만|등급|이상|포함", org): continue
+            if not re.search(r"(?:대학|공사|공단|건축|설계|연구|협회|사무소|엔지니어링|구청|시청|청|원|센터|학교)", org): continue
+            if name not in seen:
+                seen.add(name); members.append({"name": name, "org": org})
+            if len(members) >= 15: break
+        if len(members) >= 2:
+            out["members"] = members
+    # 3) 공개 시점 안내
+    m = re.search(r"심사\s*위원[^.]{0,60}?" + _JURY_NOTE, t)
+    if m:
+        out["note"] = re.sub(r"\s+", " ", m.group(1))
     return out
 
 
