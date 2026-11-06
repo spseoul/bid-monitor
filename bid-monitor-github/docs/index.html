@@ -609,6 +609,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .jury li:first-child{border-top:0}
 .jury .av2{width:28px;height:28px;border-radius:50%;background:var(--on);display:grid;place-items:center;font-size:11px;font-weight:600;color:var(--ink2);flex:none}
 .jury .nm{font-weight:500}.jury .org{color:var(--ink3);font-size:11.5px;margin-top:1px}
+.jury .nm .bg{display:inline-block;font-size:10.5px;padding:1px 7px;border-radius:999px;background:var(--on);color:var(--ink2);font-weight:500;vertical-align:1px}
 #dtl .hint2{color:var(--ink3);font-size:11.5px;line-height:1.55;margin:12px 0 0}
 #dtl .hint2 a{color:var(--acc);text-decoration:none}
 #dtl .acts{position:sticky;bottom:0;background:var(--panel);padding:12px 0 0;margin-top:16px;border-top:1px solid var(--line2)}
@@ -1372,7 +1373,7 @@ function openDetail(key,tab){
     h+=`<p class="hint2">파일은 나라장터·기관 홈페이지에서 직접 내려받습니다. 열리지 않으면 <a href="${esc(url)}" target="_blank" rel="noopener">원문 페이지</a>에서 받아 주세요.</p>`;
   }else if(D_TAB==="jury"){
     if(jury&&jury.members&&jury.members.length){
-      h+='<ul class="jury">'+jury.members.map(m=>`<li><span class="av2">${esc((m.name||"?").slice(0,1))}</span><div><div class="nm">${esc(m.name)}</div><div class="org">${esc(m.org||"")}</div></div></li>`).join("")+'</ul>';
+      h+='<ul class="jury">'+jury.members.map(m=>`<li><span class="av2">${esc((m.name||"?").slice(0,1))}</span><div><div class="nm">${esc(m.name)}${m.role?` <span class="bg" style="margin-left:4px">${esc(m.role)}</span>`:""}</div><div class="org">${esc(m.org||"")}</div></div></li>`).join("")+'</ul>';
       h+=`<p class="hint2">첨부 공고문의 "심사위원" 항목에서 자동 추출한 명단입니다${jury.note?` (공고문 표기: ${esc(jury.note)})`:""}. 정확한 명단은 원문으로 확인하세요.</p>`;
     }else{
       h+=`<div class="ai none" style="margin-top:14px"><b>${I.ppl}심사위원</b>${jury&&jury.note?`공고문 표기: <b style="display:inline;color:var(--ink)">${esc(jury.note)}</b> — 설계공모 운영지침상 작품접수 전 공개되는 경우가 많습니다.`:(info.summary?"공고문에 심사위원 항목이 없습니다.":"아직 공고문이 처리되지 않았거나 첨부가 없습니다.")}</div>`;
