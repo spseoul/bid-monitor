@@ -799,8 +799,8 @@ let TODAY=BUILT.slice(0,10);
 const LS_KW="bidmon.kw",LS_S="bidmon.filters2";
 const VIEWS={home:"홈",new:"신규 공고",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
 const HOME_DAYS=3;   // 홈: 최근 N일 내 들어온 키워드 공고만 (전체 신규는 [신규 공고])
-const VTITLE={home:`홈 · 최근 ${HOME_DAYS}일 신규`,new:"신규 공고 (최근 10일)",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
-const NEW_DAYS=10;   // 신규 공고: 최근 N일 내 처음 수집된 공고
+const NEW_DAYS=30;   // 신규 공고: 최근 N일 내 처음 수집된 공고 (수집 범위와 동일)
+const VTITLE={home:`홈 · 최근 ${HOME_DAYS}일 신규`,new:`신규 공고 (최근 ${NEW_DAYS}일)`,pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
 const LS_STAR="bidmon.star";
 const $=id=>document.getElementById(id);
 const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
@@ -1126,7 +1126,7 @@ function renderInsights(){
   el.innerHTML=`
   <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--red) 18%,transparent)">🔥</span>마감 임박 TOP ${pool.length} <span class="more" data-go="matched">${star.length?"관심 공고 기준":"키워드 공고 기준"} · 전체보기 ›</span></h3>
     ${pool.length?`<ol class="rk">${pool.map((n,i)=>li(n,i,ddChip(n))).join("")}</ol>`:'<div class="rk none">마감이 남은 공고가 없습니다.</div>'}</div>
-  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--green) 18%,transparent)">💸</span>추정가격 TOP ${top.length} <span class="more" data-sort="amtd">최근 ${NEW_DAYS}일 신규 · 금액순 보기 ›</span></h3>
+  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--green) 18%,transparent)">💸</span>추정가격 TOP ${top.length} <span class="more" data-sort="amtd">최근 ${NEW_DAYS}일 · 금액순 보기 ›</span></h3>
     ${top.length?`<ol class="rk">${top.map((n,i)=>li(n,i,`<span class="won">${eok(n.estimated_price||n.budget)}</span>`)).join("")}</ol>`:'<div class="rk none">최근 신규 공고에 금액 정보가 없습니다.</div>'}</div>
   <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--acc) 18%,transparent)">📊</span>현황 <span class="more" id="insTg">접기</span></h3>
     <div class="stat6">
