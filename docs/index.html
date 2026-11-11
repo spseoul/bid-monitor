@@ -846,8 +846,21 @@ const NEW_DAYS=30;   // 신규 공고: 최근 N일 내 처음 수집된 공고 (
 const VTITLE={home:"홈 · 관심 공고 진행 중",new:`신규 공고 (최근 ${NEW_DAYS}일)`,pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
 const LS_STAR="bidmon.star";
 const $=id=>document.getElementById(id);
-const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
-const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
+/* 부서별 분리: 같은 PC·브라우저에서 다른 부서로 로그인해도 관심 공고·키워드 선택·내 키워드·저장 필터·알림 확인이 섞이지 않도록
+   저장 키에 부서 이름을 붙임 (로그인 뒤 NS 가 정해지면 다시 읽음) */
+let NS="";
+const NSKEYS=new Set(["bidmon.filters2","bidmon.star","bidmon.kw","bidmon.savedf","bidmon.alseen"]);
+const nsKey=k=>NS&&NSKEYS.has(k)?k+"@"+NS:k;
+const load=(k,d)=>{try{const v=localStorage.getItem(nsKey(k));return v?JSON.parse(v):d;}catch(e){return d;}};
+const save=(k,v)=>{try{localStorage.setItem(nsKey(k),JSON.stringify(v));}catch(e){}};
+function enterDeptNS(dept){
+  NS=dept||"";
+  const keep={view:S.view,ins:S.ins,per:S.per};                                   // 화면 상태만 유지, 키워드 선택·필터는 부서 것으로
+  for(const k of Object.keys(S))delete S[k];
+  Object.assign(S,{view:"home",tag:"",q:"",src:"default",per:50,sort:"",ins:1,f:EMPTY_F()},load(LS_S,{}),keep);
+  if(!VIEWS[S.view])S.view="home";
+  STAR=load(LS_STAR,{}); MYKW=normKW(load(LS_KW,null)); SAVED=load(LS_SF,[]); ALSEEN=load(LS_AL,{});
+}
 const EMPTY_F=()=>({status:"open",award:[],org:[],reg:[],use:[],amin:"",amax:"",dfrom:"",dto:"",nd:""});
 const S=Object.assign({view:"home",tag:"",q:"",src:"default",per:50,sort:"",ins:1,f:EMPTY_F()},load(LS_S,{}));
 if(S.view==="new"&&!S.homeMig){S.view="home";S.homeMig=1;}   // 홈 메뉴 신설: 한 번만 홈으로
@@ -2262,6 +2275,7 @@ async function loadData(){
     if(m.locked&&m.access){
       if(!crypto.subtle){$("list").innerHTML='<div class="empty">이 브라우저는 암호화 해제를 지원하지 않습니다. https 주소로 열어 주세요.</div>';return;}
       ACCESS=await unlockDept(m);
+      enterDeptNS(ACCESS.dept); DSTATE=null; DEPTKW=null;                         // 이전에 로그인했던 부서의 흔적을 지움
       const r=await fetch("data.json?v="+(m.ver||Date.now()),{cache:"no-cache"});
       if(!r.ok)throw new Error(r.status);
       payload=await decryptBlob(await r.json(),ACCESS.dkey);
