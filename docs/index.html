@@ -2165,7 +2165,7 @@ loadData();
 /* ── PWA: 홈 화면 추가 + 오프라인 캐시 ── */
 
 /* ── 수집 점검: 갱신 표시 클릭 → 최근 30일 데이터가 제대로 들어왔는지 스스로 검수 ── */
-const SRC_NAME={g2b:"나라장터",g2b_pre:"나라장터 사전규격",lh:"LH 전자조달",lh_board:"LH 공모게시판",seoul_cleanup:"서울 정비사업",busan_dynamice:"부산 정비사업",sh_board:"SH 게시판",gh_board:"GH 게시판"};
+const SRC_NAME={g2b:"나라장터",g2b_pre:"나라장터 사전규격",g2b_prespec:"나라장터 사전규격",lh:"LH 전자조달",lh_board:"LH 공모게시판",seoul_cleanup:"서울 정비사업",busan_dynamice:"부산 정비사업",sh_board:"SH 게시판",gh_board:"GH 게시판"};
 function srcOf(n){const k=(n.key||"").split("|")[0].split(":")[0];return n.isPre&&k==="g2b"?"g2b_pre":k;}
 function fmtAgo(ms){const h=ms/36e5;return h<1?Math.round(h*60)+"분 전":h<48?Math.round(h*10)/10+"시간 전":Math.round(h/24)+"일 전";}
 function openCheck(){
@@ -2187,7 +2187,9 @@ function openCheck(){
   // 첨부·공고문 처리 (관심 공고 기준)
   const recent12=new Date(built);recent12.setDate(recent12.getDate()-12);const r12=recent12.toISOString().slice(0,10);
   const tgt=DATA.filter(n=>n.matched&&!n.isPre&&(n.first_seen||n.notice_date||"")>=r12);
-  const wf=tgt.filter(n=>dFiles(n).length), wi=tgt.filter(n=>dInfo(n).summary||dInfo(n).schedule), wj=tgt.filter(n=>(dInfo(n).jury||{}).members&&dInfo(n).jury.members.length), wt=tgt.filter(n=>n.info_tried), wm=tgt.filter(n=>/명단 미인식/.test(n.info_diag||""));
+  const wf=tgt.filter(n=>dFiles(n).length), wi=tgt.filter(n=>dInfo(n).summary||dInfo(n).schedule), wt=tgt.filter(n=>n.info_tried);
+  const comp=tgt.filter(n=>/설계공모|현상설계|공모/.test((n.title||"")+(n.tags||"")));      // 심사위원 명단은 설계공모에만 실림
+  const wj=comp.filter(n=>(dInfo(n).jury||{}).members&&dInfo(n).jury.members.length), wn=comp.filter(n=>!((dInfo(n).jury||{}).members||[]).length&&(dInfo(n).jury||{}).note), wm=comp.filter(n=>/명단 미인식/.test(n.info_diag||""));
   const pct=(a,b)=>b?Math.round(a/b*100)+"%":"-";
   let h=`<h3>수집 점검 <button class="x" onclick="closeCheck()" aria-label="닫기">×</button></h3>
   <div class="sub">이 화면은 현재 불러온 데이터를 기준으로 계산합니다 · 지금 ${esc(now.toLocaleString("ko-KR",{hour12:false}).slice(0,-3))}</div>
@@ -2208,7 +2210,7 @@ function openCheck(){
     <div><b>${pct(wf.length,tgt.length)}</b><span>첨부 주소 확보 (${wf.length}건)</span></div>
     <div><b>${pct(wt.length,wf.length)}</b><span>공고문 읽기 시도 (${wt.length}/${wf.length})</span></div>
     <div><b>${pct(wi.length,wf.length)}</b><span>요약·일정 추출 (${wi.length}건)</span></div>
-    <div><b>${wj.length}건</b><span>심사위원 명단 확보${wm.length?` · <span class="warn">명단 미인식 ${wm.length}건</span>`:""}</span></div>
+    <div><b>${wj.length}/${comp.length}</b><span>설계공모 심사위원 명단${wn.length?` · 추후공개 ${wn.length}`:""}${wm.length?` · <span class="warn">미인식 ${wm.length}</span>`:""}</span></div>
   </div>
   ${wm.length?`<div class="note">명단 미인식 공고(공고문에 "심사위원"은 있는데 표를 못 읽은 것): ${wm.slice(0,5).map(n=>`<a href="#" onclick="closeCheck();openDetail('${esc(n.key)}','jury');return false">${esc((n.title||"").slice(0,22))}…</a>`).join(" · ")}${wm.length>5?` 외 ${wm.length-5}건`:""}</div>`:""}
   <div class="note">판정 기준 — 마지막 수집: 평일 09~18시는 2.5시간, 그 외 26시간 넘으면 빨강 · 평일 0건은 공휴일일 수 있음 · 수집처 "멈춤 의심"이 이틀 이상 이어지면 해당 사이트 접속 차단 가능성</div>
