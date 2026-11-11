@@ -3,9 +3,10 @@ name: 입찰공고 수집
 # PC 없이 GitHub 에서만 수집·배포합니다. 수동 실행: Actions 탭 → 입찰공고 수집 → Run workflow
 on:
   schedule:
-    - cron: "0 22 * * *"                          # 매일 07:00 KST  → 최근 7일 (하루 한 번 넓게 훑어 누락 보정)
-    - cron: "5,35 23,0-9 * * 1-5"                 # 평일 08:05~18:35 KST 30분마다 → 최근 3일 (증분). GitHub 이 예약을 건너뛰어도 30분 뒤 재기회
-    - cron: "5 1,5 * * 0,6"                       # 주말 10:05, 14:05 KST → 최근 3일
+    # GitHub 예약은 매시 정각·05분처럼 전 세계가 몰리는 시각에 많이 건너뜁니다 → 일부러 어중간한 분(17·47분)으로 분산
+    - cron: "13 22 * * *"                         # 매일 07:13 KST → 최근 7일 (하루 한 번 넓게 훑어 누락 보정)
+    - cron: "17,47 23,0-9 * * 1-5"                # 평일 08:17~18:47 KST 30분마다 → 최근 3일 (증분)
+    - cron: "17 1,5 * * 0,6"                      # 주말 10:17, 14:17 KST → 최근 3일
   workflow_dispatch:
     inputs:
       days:
@@ -53,7 +54,7 @@ jobs:
           ACCESS_PASSWORDS: ${{ secrets.ACCESS_PASSWORDS }}
           GITHUB_TOKEN: ${{ secrets.STATE_TOKEN }}
           # 수동 실행은 입력값, 07:00 예약 실행은 7일, 그 외 예약은 비움(3일 증분)
-          BIDMON_DAYS: ${{ github.event.inputs.days || (github.event.schedule == '0 22 * * *' && '7') || '' }}
+          BIDMON_DAYS: ${{ github.event.inputs.days || (github.event.schedule == '13 22 * * *' && '7') || '' }}
           BIDMON_INFO_MAX: "80"            # 한 번에 공고문(첨부)을 읽을 공고 수 — 밀린 공고가 많을 때 빨리 비움
           TZ: Asia/Seoul
         run: |
