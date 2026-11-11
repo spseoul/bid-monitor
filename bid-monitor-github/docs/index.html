@@ -707,6 +707,29 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 #chk .btns button.pri2{background:var(--acc);border-color:var(--acc);color:#fff}
 #newdata{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:65;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:999px;font-size:12.5px;display:none;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
 #newdata.on{display:flex}#newdata button{border:0;background:var(--acc);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
+
+/* ── 홈 대시보드 ── */
+#ins.home{grid-template-columns:1.15fr 1fr 1fr}
+.it .n.hot{background:var(--red);color:#fff;border-radius:99px;padding:0 6px;font-weight:600}
+.card h3 .cnt{background:var(--red);color:#fff;border-radius:99px;font-size:10.5px;padding:1px 6px;font-weight:600}
+.alist li.al{grid-template-columns:18px 1fr auto;padding:6px 0}
+.alist .ic{font-size:13px;text-align:center}
+.alist .al.red .tt{color:var(--red)}.alist .al.amb .tt{color:var(--amber)}.alist .al.blu .tt{color:var(--blue)}.alist .al.gry .tt{color:var(--ink2)}
+.alist .al.seen{opacity:.5}.alist .al.seen .tt{color:var(--ink2)}
+.alist .ok{width:20px;height:20px;border-radius:50%;display:grid;place-items:center;color:var(--ink3);font-size:11px;border:1px solid var(--line2);background:var(--panel)}
+.alist .ok:hover{color:#fff;background:var(--green);border-color:var(--green)}
+.alist .al.seen .ok{background:var(--green);color:#fff;border-color:var(--green)}
+.lnk2{color:var(--acc);cursor:pointer}.lnk2:hover{text-decoration:underline}
+.tl{display:flex;flex-direction:column;gap:6px;max-height:230px;overflow:auto}
+.tl .dh{font-size:11px;color:var(--ink3);font-weight:600;margin:2px 0 2px}
+.tl .te{display:flex;gap:6px;align-items:center;padding:3px 0;cursor:pointer;min-width:0}
+.tl .te .tt{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tl .te:hover .tt{color:var(--acc)}
+.tl .el{flex:none;font-size:10.5px;padding:1px 6px;border-radius:99px;background:color-mix(in srgb,var(--purple) 14%,transparent);color:var(--purple);font-weight:500}
+.tl .el.end{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
+.tl .more2{color:var(--ink3);font-size:11px}
+@media (max-width:1024px){#ins.home{grid-template-columns:1fr 1fr}#ins.home .card:nth-child(3){display:block}}
+@media (max-width:640px){#ins.home{grid-template-columns:1fr}#ins.home .card:nth-child(2),#ins.home .card:nth-child(3){display:block}#ins.home .card:nth-child(4),#ins.home .card:nth-child(5){display:none}}
 </style>
 </head>
 <body>
@@ -800,7 +823,7 @@ const LS_KW="bidmon.kw",LS_S="bidmon.filters2";
 const VIEWS={home:"홈",new:"신규 공고",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
 const HOME_DAYS=3;   // 홈: 최근 N일 내 들어온 키워드 공고만 (전체 신규는 [신규 공고])
 const NEW_DAYS=30;   // 신규 공고: 최근 N일 내 처음 수집된 공고 (수집 범위와 동일)
-const VTITLE={home:`홈 · 최근 ${HOME_DAYS}일 신규`,new:`신규 공고 (최근 ${NEW_DAYS}일)`,pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
+const VTITLE={home:"홈 · 관심 공고 진행 중",new:`신규 공고 (최근 ${NEW_DAYS}일)`,pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
 const LS_STAR="bidmon.star";
 const $=id=>document.getElementById(id);
 const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
@@ -937,15 +960,15 @@ function inView(n,v){
   if(v==="all")return true;
   if(v==="matched")return n.starred&&!(!n.isPre&&n.pre&&n.pre.starred);   // 체크한 공고 전부 (사전규격·입찰공고 둘 다 체크됐으면 사전규격 쪽으로 한 번만)
   if(!n.matched)return false;                        // 신규·사전규격은 키워드 기준
-  if(v==="new")return n.isNew&&!(n.isPre&&n.bid);          // 입찰공고가 올라온 사전규격은 신규·사전규격 목록에서 제외
-  if(v==="home")return n.isHome&&!(n.isPre&&n.bid);
+  if(v==="new")return n.isNew&&!n.isPre;                   // 신규 공고 = 본공고만 (사전규격에서 본공고로 넘어온 것 포함). 사전규격은 [사전규격] 메뉴
+  if(v==="home")return n.starred&&!(!n.isPre&&n.pre&&n.pre.starred);   // 홈 아래 목록 = 관심 공고 (카드가 핵심)
   if(v==="pre")return n.isPre&&!n.bid;
   return true;
 }
 const hasTag=(n,t)=>!t||(n.tags||"").split(",").includes(t);
 
 function counts(){
-  for(const v of Object.keys(VIEWS)){const c=DATA.filter(n=>base(n,v)&&inView(n,v)&&hasTag(n,S.tag)).length;const el=$("n-"+v);if(el)el.textContent=v==="home"?(c?c.toLocaleString():""):c.toLocaleString();}   // 메뉴별 건수는 각 메뉴 기준으로 (관심 공고는 마감된 체크 공고 포함)
+  for(const v of Object.keys(VIEWS)){const c=DATA.filter(n=>base(n,v)&&inView(n,v)&&hasTag(n,S.tag)).length;const el=$("n-"+v);if(el){if(v==="home"){const u=alUnseen();el.textContent=u?String(u):"";el.classList.toggle("hot",u>0);}else el.textContent=c.toLocaleString();}}   // 메뉴별 건수는 각 메뉴 기준으로 (관심 공고는 마감된 체크 공고 포함)
   $("total").textContent=DATA.length.toLocaleString();
 }
 
@@ -1066,10 +1089,10 @@ function render(){
   const el=$("list");
   renderInsights();
   if(!rows.length){
-    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.src==="dept"&&!DEPTKW&&S.view!=="all")?"부서 키워드가 아직 없습니다. [키워드 편집]에서 입력하거나, 왼쪽 [회사 기본값]을 선택하세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":S.view==="home"?`최근 ${HOME_DAYS}일 안에 들어온 키워드 공고가 없습니다. 왼쪽 [신규 공고]에서 최근 ${NEW_DAYS}일치를 볼 수 있습니다.`:"조건에 맞는 공고가 없습니다."))+'</div>';
+    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.src==="dept"&&!DEPTKW&&S.view!=="all")?"부서 키워드가 아직 없습니다. [키워드 편집]에서 입력하거나, 왼쪽 [회사 기본값]을 선택하세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":S.view==="home"?"관심 공고로 체크한 공고가 여기에 모입니다. 위 카드에서 오늘 확인할 것을 보세요.":"조건에 맞는 공고가 없습니다."))+'</div>';
     return;
   }
-  if(S.view==="matched"){renderMatched(rows,el);el.scrollTop=0;return;}
+  if(S.view==="matched"||S.view==="home"){renderMatched(rows,el);el.scrollTop=0;return;}
   if(S.sort){   // 정렬 선택 시: 그룹 없이 표처럼 한 줄로
     const amtOf=n=>n.estimated_price||n.budget||0;
     const srt={new:(a,b)=>(b.notice_date||"").localeCompare(a.notice_date||""),amtd:(a,b)=>amtOf(b)-amtOf(a),amta:(a,b)=>amtOf(a)-amtOf(b)}[S.sort];
@@ -1107,24 +1130,88 @@ function theadHTML(){
   return `<div class="thead"><span class="sp" style="width:18px"></span><span class="sp" style="width:13px"></span><span class="sp" style="width:52px">D-day</span><span class="sp" style="width:14px"></span><span class="tt">공고명 · 수요기관</span>
     <span class="right"><span class="c-inst">수요기관</span>${so(S.sort==="amtd"?"amta":"amtd","추정가격","c-amt")}${so("new","공고일","c-nd")}${so("","마감일","c-date")}<span class="c-end"></span></span></div>`;
 }
+
+/* ── 홈: 오늘 확인할 것 (자동 판단) ──
+   우선순위: 관심 공고 마감 임박 > 사전규격→본공고 전환 > 재공고·정정 > 오늘 신규 > 사전규격 의견마감 > 심사위원 명단 확보 > 수집 상태 */
+const LS_AL="bidmon.alseen";
+let ALSEEN=load(LS_AL,{});
+function homeAlerts(){
+  const live=DATA.filter(n=>!n.orphan), m=live.filter(n=>n.matched), A=[];
+  const d3=new Date(new Date(TODAY+"T00:00:00").getTime()-2*864e5).toISOString().slice(0,10);
+  const isStar=n=>n.starred||(n.pre&&n.pre.starred);
+  for(const n of live.filter(n=>!n.isPre&&isStar(n)&&n.dd!==null&&n.dd>=0&&n.dd<=3).sort((a,b)=>a.dd-b.dd))
+    A.push({k:"due:"+n.key,lvl:n.dd<=1?"red":"amb",ico:"⏰",t:`관심 공고 마감 ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title,key:n.key,tab:"sched"});
+  for(const n of m.filter(n=>!n.isPre&&n.pre&&(n.first_seen||"")>=d3))
+    A.push({k:"cv:"+n.key,lvl:n.pre.starred?"amb":"blu",ico:"🔁",t:(n.pre.starred?"관심 사전규격":"사전규격")+" → 본공고 올라옴",s:n.title,key:n.key});
+  for(const n of m.filter(n=>!n.isPre&&(n.isRe||/정정|변경/.test((n.notice_kind||"")+(n.title||"")))&&(n.first_seen||"")>=d3&&!n.pre))
+    A.push({k:"re:"+n.key,lvl:"blu",ico:"🔄",t:n.isRe?"재공고":"정정·변경 공고",s:n.title,key:n.key});
+  const tdB=m.filter(n=>!n.isPre&&n.isToday), tdP=m.filter(n=>n.isPre&&!n.bid&&n.isToday);
+  if(tdB.length)A.push({k:"today:b:"+TODAY,lvl:"blu",ico:"✨",t:`오늘 새 본공고 ${tdB.length}건`,s:tdB.slice(0,3).map(n=>n.title).join(" · ")+(tdB.length>3?" 외":""),go:"new"});
+  if(tdP.length)A.push({k:"today:p:"+TODAY,lvl:"blu",ico:"📝",t:`오늘 새 사전규격 ${tdP.length}건`,s:tdP.slice(0,3).map(n=>n.title).join(" · ")+(tdP.length>3?" 외":""),go:"pre"});
+  const pe=m.filter(n=>n.isPre&&!n.bid&&n.dd!==null&&n.dd>=0&&n.dd<=2);
+  for(const n of pe.filter(n=>n.starred))A.push({k:"pre:"+n.key,lvl:"amb",ico:"💬",t:`관심 사전규격 의견등록 마감 ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title,key:n.key});
+  const peN=pe.filter(n=>!n.starred).length; if(peN)A.push({k:"pre:n:"+TODAY,lvl:"gry",ico:"💬",t:`사전규격 의견등록 마감 임박 ${peN}건`,s:"체크하지 않은 사전규격",go:"pre"});
+  for(const n of m.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&(n.inf&&n.inf.jury&&n.inf.jury.members&&n.inf.jury.members.length)&&(n.info_tried||"")>=d3))
+    A.push({k:"jury:"+n.key,lvl:"gry",ico:"👥",t:`심사위원 명단 확보 (${n.inf.jury.members.length}명)`,s:n.title,key:n.key,tab:"jury"});
+  // 시스템
+  const ago=(new Date()-new Date(BUILT))/36e5, d=new Date(), biz=d.getDay()>=1&&d.getDay()<=5&&d.getHours()>=9&&d.getHours()<=18;
+  if(biz?ago>2.5:ago>26)A.push({k:"sys:stale:"+BUILT,lvl:"red",ico:"⚠️",t:`수집이 ${fmtAgo(new Date()-new Date(BUILT))} 멈춰 있음`,s:"갱신 표시를 눌러 점검 창에서 확인",chk:1});
+  const d7=new Date(new Date(TODAY+"T00:00:00").getTime()-7*864e5).toISOString().slice(0,10), d14=new Date(new Date(TODAY+"T00:00:00").getTime()-14*864e5).toISOString().slice(0,10);
+  const bySrc={};for(const n of live){const k=srcOf(n);const o=bySrc[k]=bySrc[k]||{a:0,b:0};const dt=(n.notice_date||"").slice(0,10);if(dt>=d7)o.a++;else if(dt>=d14)o.b++;}
+  const dead=Object.entries(bySrc).filter(([k,o])=>o.a===0&&o.b>=3).map(([k])=>SRC_NAME[k]||k);
+  if(dead.length)A.push({k:"sys:dead:"+dead.join(",")+":"+TODAY.slice(0,7),lvl:"amb",ico:"⚠️",t:`수집처 멈춤 의심: ${dead.join(", ")}`,s:"최근 7일 0건 · 점검 창에서 확인",chk:1});
+  return A;
+}
+const alUnseen=()=>homeAlerts().filter(a=>!ALSEEN[a.k]).length;
+function alSeen(keys){const t=Date.now();for(const k of keys)ALSEEN[k]=t;for(const k of Object.keys(ALSEEN))if(t-ALSEEN[k]>30*864e5)delete ALSEEN[k];save(LS_AL,ALSEEN);}
+/* 다가오는 일정 7일: 마감·현장설명·질의마감·참가등록·제출 (키워드 공고, 관심 공고 우선) */
+function upcoming(){
+  const live=DATA.filter(n=>!n.orphan&&n.matched&&!n.isPre), ev=[];
+  const lim=new Date(new Date(TODAY+"T00:00:00").getTime()+7*864e5).toISOString().slice(0,10);
+  const push=(n,d,l)=>{d=(d||"").slice(0,10);if(d&&d>=TODAY&&d<=lim)ev.push({d,l,n});};
+  for(const n of live){
+    push(n,n.close_date,"마감");
+    const sc=n.inf&&n.inf.schedule||{};
+    push(n,sc.site_brief,"현장설명");push(n,sc.qna_close,"질의마감");push(n,sc.reg_close,"참가등록");push(n,sc.submit_close,"제출마감");push(n,sc.judge,"심사");
+  }
+  const star=n=>n.starred||(n.pre&&n.pre.starred);
+  ev.sort((a,b)=>a.d.localeCompare(b.d)||(star(b.n)-star(a.n)));
+  const by={};for(const e of ev)(by[e.d]=by[e.d]||[]).push(e);
+  return by;
+}
 /* ── 인사이트 카드: 마감 임박 TOP / 추정가격 TOP / 이번 주 현황 ── */
 function renderInsights(){
   const el=$("ins");
-  if(S.view!=="home"){el.hidden=true;el.classList.remove("mini");return;}          // 카드는 홈에서만
-  if(!S.ins){el.classList.add("mini");el.innerHTML='<span class="more" id="insTg">▸ 마감 임박 · 추정가격 TOP · 현황 카드 펼치기</span>';el.hidden=false;return;}
+  if(S.view!=="home"){el.hidden=true;el.classList.remove("mini","home");return;}          // 카드는 홈에서만
+  if(!S.ins){el.classList.remove("home");el.classList.add("mini");el.innerHTML='<span class="more" id="insTg">▸ 마감 임박 · 추정가격 TOP · 현황 카드 펼치기</span>';el.hidden=false;return;}
   el.classList.remove("mini");
   const live=DATA.filter(n=>!n.orphan);
   const bids=live.filter(n=>!n.isPre);
   const star=bids.filter(n=>n.starred||(n.pre&&n.pre.starred));
-  const pool=(star.length?star:bids.filter(n=>n.matched)).filter(n=>n.dd!==null&&n.dd>=0).sort((a,b)=>a.dd-b.dd).slice(0,6);
+  const isSt=n=>n.starred||(n.pre&&n.pre.starred);
+  const pool=bids.filter(n=>(isSt(n)||n.matched)&&n.dd!==null&&n.dd>=0).sort((a,b)=>(isSt(b)-isSt(a))||(a.dd-b.dd)).slice(0,6);   // 관심 공고 먼저, 나머지는 키워드 공고로 채움
   const top=bids.filter(n=>n.matched&&n.isNew&&(n.estimated_price||n.budget)).sort((a,b)=>(b.estimated_price||b.budget)-(a.estimated_price||a.budget)).slice(0,5);
   const m=live.filter(n=>n.matched);
-  const c={nw:m.filter(n=>n.isNew&&!(n.isPre&&n.bid)).length,wk:m.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&n.dd<=6).length,st:live.filter(n=>n.starred&&!(!n.isPre&&n.pre&&n.pre.starred)).length,
+  const c={nw:m.filter(n=>n.isNew&&!n.isPre).length,wk:m.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&n.dd<=6).length,st:live.filter(n=>n.starred&&!(!n.isPre&&n.pre&&n.pre.starred)).length,
     pr:m.filter(n=>n.isPre&&!n.bid&&!(n.dd!==null&&n.dd<0&&!preAlive(n))).length,cv:m.filter(n=>!n.isPre&&n.pre&&n.isNew).length,re:m.filter(n=>!n.isPre&&n.isRe&&n.isNew).length};
   const late=live.filter(n=>n.isPre&&n.starred&&!n.bid&&n.dd!==null&&n.dd<-14).length;
-  const li=(n,i,right)=>`<li data-key="${esc(n.key)}"><span class="n">${i+1}</span><div style="min-width:0"><div class="tt">${esc(n.title)}</div><div class="s">${(n.estimated_price||n.budget)?"추정 "+eok(n.estimated_price||n.budget)+" · ":""}${esc(shortInst(instOf(n)))}${n.close_date?" · 마감 "+n.close_date.slice(5,10):""}</div></div>${right}</li>`;
+  const li=(n,i,right)=>`<li data-key="${esc(n.key)}"><span class="n">${i+1}</span><div style="min-width:0"><div class="tt">${isSt(n)?"★ ":""}${esc(n.title)}</div><div class="s">${(n.estimated_price||n.budget)?"추정 "+eok(n.estimated_price||n.budget)+" · ":""}${esc(shortInst(instOf(n)))}${n.close_date?" · 마감 "+n.close_date.slice(5,10):""}</div></div>${right}</li>`;
+  const AL=homeAlerts(), unseen=AL.filter(a=>!ALSEEN[a.k]);
+  const tdNew=bids.filter(n=>n.matched&&(n.first_seen||"")>=new Date(new Date(TODAY+"T00:00:00").getTime()-864e5).toISOString().slice(0,10)).sort((a,b)=>(b.first_seen||"").localeCompare(a.first_seen||"")||((b.estimated_price||b.budget||0)-(a.estimated_price||a.budget||0))).slice(0,7);
+  const tdPre=live.filter(n=>n.matched&&n.isPre&&!n.bid&&n.isToday).length;
+  const UP=upcoming(), upDays=Object.keys(UP);
+  const dlab=d=>{const x=new Date(d+"T00:00:00");const w="일월화수목금토"[x.getDay()];const diff=Math.round((x-new Date(TODAY+"T00:00:00"))/864e5);return `${d.slice(5).replace("-",".")} (${w})${diff===0?" 오늘":diff===1?" 내일":""}`;};
+  const alLi=a=>`<li class="al ${a.lvl}${ALSEEN[a.k]?" seen":""}" data-al="${esc(a.k)}"${a.key?` data-key="${esc(a.key)}"${a.tab?` data-tab="${a.tab}"`:""}`:a.go?` data-go="${a.go}"`:a.chk?` data-chk="1"`:""}><span class="ic">${a.ico}</span><div style="min-width:0"><div class="tt">${esc(a.t)}</div><div class="s">${esc(a.s)}</div></div><span class="ok" data-alok="${esc(a.k)}" title="확인함">✓</span></li>`;
+  el.classList.add("home");
   el.innerHTML=`
-  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--red) 18%,transparent)">🔥</span>마감 임박 TOP ${pool.length} <span class="more" data-go="matched">${star.length?"관심 공고 기준":"키워드 공고 기준"} · 전체보기 ›</span></h3>
+  <div class="card c-al"><h3><span class="i" style="background:color-mix(in srgb,var(--red) 18%,transparent)">🔔</span>오늘 확인할 것 ${unseen.length?`<span class="cnt">${unseen.length}</span>`:""}<span class="more" data-alall="1">${AL.length?"모두 확인 ›":""}</span></h3>
+    ${AL.length?`<ul class="rk alist">${AL.map(alLi).join("")}</ul>`:'<div class="rk none">새로 확인할 것이 없습니다. 관심 공고 마감·사전규격 전환·재공고·오늘 신규가 생기면 여기에 뜹니다.</div>'}</div>
+  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--blue) 18%,transparent)">✨</span>오늘·어제 신규 본공고 ${tdNew.length} <span class="more" data-go="new">최근 ${NEW_DAYS}일 전체 ›</span></h3>
+    ${tdNew.length?`<ol class="rk">${tdNew.map((n,i)=>li(n,i,n.pre?'<span class="ddc pre">사전→본</span>':ddChip(n))).join("")}</ol>`:'<div class="rk none">오늘·어제 들어온 키워드 본공고가 없습니다.</div>'}
+    ${tdPre?`<p class="foot">오늘 새 사전규격 <b>${tdPre}건</b> → <span class="lnk2" data-go="pre">사전규격 보기</span></p>`:""}</div>
+  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--purple) 18%,transparent)">📅</span>다가오는 일정 · 7일 <span class="more" data-go="new" data-due="7">이번 주 마감 ›</span></h3>
+    ${upDays.length?`<div class="tl">${upDays.map(d=>`<div class="td"><div class="dh">${dlab(d)}</div>${UP[d].slice(0,4).map(e=>`<div class="te" data-key="${esc(e.n.key)}" data-tab="sched"><span class="el ${e.l==="마감"?"end":""}">${e.l}</span><span class="tt">${(e.n.starred||(e.n.pre&&e.n.pre.starred))?"★ ":""}${esc(e.n.title)}</span></div>`).join("")}${UP[d].length>4?`<div class="te more2" data-go="new" data-due="7">외 ${UP[d].length-4}건</div>`:""}</div>`).join("")}</div>`:'<div class="rk none">7일 안에 마감·현장설명·질의마감 일정이 없습니다.</div>'}</div>
+  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--red) 18%,transparent)">🔥</span>마감 임박 TOP ${pool.length} <span class="more" data-go="new" data-due="7">${star.length?"★ 관심 공고 우선":"키워드 공고 기준"} · 이번 주 마감 ›</span></h3>
     ${pool.length?`<ol class="rk">${pool.map((n,i)=>li(n,i,ddChip(n))).join("")}</ol>`:'<div class="rk none">마감이 남은 공고가 없습니다.</div>'}</div>
   <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--green) 18%,transparent)">💸</span>추정가격 TOP ${top.length} <span class="more" data-sort="amtd">최근 ${NEW_DAYS}일 · 금액순 보기 ›</span></h3>
     ${top.length?`<ol class="rk">${top.map((n,i)=>li(n,i,`<span class="won">${eok(n.estimated_price||n.budget)}</span>`)).join("")}</ol>`:'<div class="rk none">최근 신규 공고에 금액 정보가 없습니다.</div>'}</div>
@@ -1137,7 +1224,7 @@ function renderInsights(){
       <div data-go="new"><b class="${c.cv?"grn":""}">${c.cv}</b><span>사전규격→본공고</span></div>
       <div data-go="new"><b>${c.re}</b><span>재공고</span></div>
     </div>
-    <p class="foot">${late?`관심 사전규격 <b>${late}건</b>은 의견마감 2주가 지나도 본공고가 없음`:`키워드 일치 ${m.length.toLocaleString()}건 · 전체 ${live.length.toLocaleString()}건 수집`}${ACCESS?` · <b>${esc(ACCESS.dept)}</b>`:""}</p></div>`;
+    <p class="foot">${late?`관심 사전규격 <b>${late}건</b>은 의견마감 2주가 지나도 본공고가 없음`:`키워드 일치 ${m.length.toLocaleString()}건 · 전체 ${live.length.toLocaleString()}건 수집`}${ACCESS?` · <b>${esc(ACCESS.dept)}</b>`:""} · 마지막 수집 <span class="lnk2" data-chk="1">${esc(BUILT.replace("T"," ").slice(5,16))}</span></p></div>`;
   el.hidden=false;
 }
 
@@ -1233,7 +1320,7 @@ function pagerHTML(pages,total,per){
     <select id="per">${[25,50,100,200].map(v=>`<option value="${v}" ${v===per?"selected":""}>${v}개씩</option>`).join("")}</select></div>`;
 }
 
-const TABICO={new:'<svg viewBox="0 0 24 24"><path d="M13 2 3 14h8l-1 8 10-12h-8z"/></svg>',matched:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>',pre:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',all:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>'};
+const TABICO={home:'<svg viewBox="0 0 24 24"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>',new:'<svg viewBox="0 0 24 24"><path d="M13 2 3 14h8l-1 8 10-12h-8z"/></svg>',matched:'<svg viewBox="0 0 24 24"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>',pre:'<svg viewBox="0 0 24 24"><rect x="4" y="3" width="16" height="18" rx="2"/><path d="M8 8h8M8 12h8M8 16h5"/></svg>',all:'<svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h16"/></svg>'};
 function drawTabbar(){
   $("tabbar").innerHTML=Object.entries(VIEWS).map(([v,l])=>`<button data-view="${v}" class="${v===S.view?'on':''}">${TABICO[v]}${l}<b>${$("n-"+v).textContent}</b></button>`).join("");
 }
@@ -1775,8 +1862,12 @@ document.addEventListener("click",e=>{
   const ins=e.target.closest("#ins");
   if(ins){
     if(e.target.closest("#insTg")){S.ins=S.ins?0:1;save(LS_S,S);renderInsights();return;}
-    const li=e.target.closest(".rk li[data-key]");if(li){openDetail(li.dataset.key);return;}
-    const go=e.target.closest("[data-go]");if(go){S.view=go.dataset.go;S.f.status=go.dataset.due?"week":(S.f.status==="week"?"open":S.f.status);S.sort="";update();return;}
+    const ok=e.target.closest("[data-alok]");if(ok){alSeen([ok.dataset.alok]);renderInsights();counts();return;}
+    if(e.target.closest("[data-alall]")){alSeen(homeAlerts().map(a=>a.k));renderInsights();counts();return;}
+    if(e.target.closest("[data-chk]")){openCheck();return;}
+    const al=e.target.closest(".al[data-al]");if(al){alSeen([al.dataset.al]);}
+    const li=e.target.closest("[data-key]");if(li){openDetail(li.dataset.key,li.dataset.tab||undefined);if(al){renderInsights();counts();}return;}
+    const go=e.target.closest("[data-go]");if(go){if(al){renderInsights();counts();}S.view=go.dataset.go;S.f.status=go.dataset.due?"week":(S.f.status==="week"?"open":S.f.status);S.sort="";update();return;}
     const sr=e.target.closest("[data-sort]");if(sr){S.view="new";S.sort=sr.dataset.sort;update();return;}
     return;
   }
