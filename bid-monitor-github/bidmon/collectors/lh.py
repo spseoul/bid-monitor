@@ -6,7 +6,7 @@ LH 전자조달(ebid.lh.or.kr) 전자입찰공고조회 수집기 — 용역 공
 - 목록: /ebid.et.tp.cmd.BidMasterListCmd.dev  (POST, 10건/페이지, targetRow=1,11,21…)
   s_cstrtnJobGbCd=20(용역), s_tndrdocAcptOpenDtm~EndDtm = 입찰마감일 범위(YYYY/MM/DD)
 - 상세: /ebid.et.tp.cmd.BidsrvcsDetailListCmd.dev?bidNum=…&bidDegree=…  (공고일·금액 보조 추출)
-- LH 서버 인증서가 파이썬 기본 인증서 목록에 없어 truststore(윈도우 인증서) 또는 검증 생략 사용
+- LH 서버 인증서가 파이썬 기본 인증서 목록에 없어 SSL 오류 시 이 세션만 검증 생략
 """
 import html as _html
 import logging
@@ -67,15 +67,15 @@ def _to_int(v):
 
 
 def _make_session() -> requests.Session:
+    """LH 서버 인증서 체인이 리눅스(GitHub Actions)의 기본 인증서 목록으로는 검증되지 않아
+    (윈도우 PC 에서는 truststore 로 OS 인증서를 써서 됐음) 이 세션은 검증을 끔.
+    공개 공고 목록을 읽기만 하므로 위험 없음. truststore 전역 주입은 쓰지 않음 — 주입하면
+    verify=False 가 듣지 않아 리눅스에서는 영영 실패."""
+    import urllib3
+    urllib3.disable_warnings()
     s = requests.Session()
     s.headers.update(HEADERS)
-    try:
-        import truststore  # 윈도우 인증서 저장소 사용 (pip install truststore)
-        truststore.inject_into_ssl()
-    except Exception:
-        import urllib3
-        urllib3.disable_warnings()
-        s.verify = False
+    s.verify = False
     return s
 
 
