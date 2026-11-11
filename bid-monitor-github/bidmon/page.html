@@ -743,6 +743,16 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .alist li.sub li:hover .tt{color:var(--acc)}
 .alist li.sub li.more2{color:var(--ink3);font-size:11px}
 @media (max-width:640px){#ins.home .card{max-height:none}}
+
+@media (max-width:640px){
+  #chk .box{padding:14px 14px;border-radius:12px}
+  #chk .lbl .mid{display:none}
+  #chk td,#chk th{padding:5px 4px;white-space:nowrap;font-size:11.5px}
+  #chk td:first-child{white-space:normal}
+  #chk .kv{grid-template-columns:1fr 1fr}
+  #chk .btns{flex-wrap:wrap}#chk .btns button{flex:1;min-width:120px}
+  .fld .kbd{display:none}
+}
 </style>
 </head>
 <body>
@@ -2325,9 +2335,9 @@ function openCheck(){
     <div><b>${esc(dmin)}</b><span>가장 오래된 공고일</span></div>
     <div><b>${esc(dmax)}</b><span>가장 최근 공고일</span></div>
   </div>
-  <h4>공고일별 건수 — 최근 30일 ${zeroBiz.length?`<span class="bad">· 평일인데 0건: ${zeroBiz.map(x=>x[0].slice(5)).join(", ")}</span>`:`<span class="ok">· 평일 공백 없음</span>`}</h4>
+  <h4>공고일별 건수 — 최근 30일 ${zeroBiz.length?`<span class="bad">· 평일인데 0건 ${zeroBiz.length}일: ${zeroBiz.slice(0,6).map(x=>x[0].slice(5)).join(", ")}${zeroBiz.length>6?` 외 ${zeroBiz.length-6}일`:""}</span>`:`<span class="ok">· 평일 공백 없음</span>`}</h4>
   <div class="bars">${days.map(([k,c,w])=>`<i class="${c===0?"z":""} ${w===0||w===6?"we":""}" style="height:${Math.max(2,c/mx*100)}%" data-t="${k.slice(5)} · ${c}건"></i>`).join("")}</div>
-  <div class="lbl"><span>${esc(days[0][0].slice(5))}</span><span>30일 기준일 ${esc(cutS)} 이전 공고는 마감 전인 것만 유지</span><span>${esc(days[29][0].slice(5))}</span></div>
+  <div class="lbl"><span>${esc(days[0][0].slice(5))}</span><span class="mid">30일 기준일 ${esc(cutS)} 이전 공고는 마감 전인 것만 유지</span><span>${esc(days[29][0].slice(5))}</span></div>
   <h4>수집처별 — 최근 7일 vs 그 전 7일 <span class="sub" style="display:inline">(최근 7일이 0이면 그 수집처가 멈춘 것)</span></h4>
   <table><tr><th>수집처</th><th>최근 7일</th><th>이전 7일</th><th>전체</th><th>상태</th></tr>
   ${Object.entries(bySrc).sort((a,b)=>b[1].t-a[1].t).map(([k,o])=>`<tr><td>${esc(SRC_NAME[k]||k)}</td><td>${o.a}</td><td>${o.b}</td><td>${o.t.toLocaleString()}</td><td class="${o.a===0&&o.b>0?"bad":o.a<o.b*0.3&&o.b>=5?"warn":"ok"}">${o.a===0&&o.b>0?"멈춤 의심":o.a<o.b*0.3&&o.b>=5?"급감":"정상"}</td></tr>`).join("")}</table>
