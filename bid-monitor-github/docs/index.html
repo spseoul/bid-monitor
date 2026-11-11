@@ -720,19 +720,16 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .alist .ok:hover{color:#fff;background:var(--green);border-color:var(--green)}
 .alist .al.seen .ok{background:var(--green);color:#fff;border-color:var(--green)}
 .lnk2{color:var(--acc);cursor:pointer}.lnk2:hover{text-decoration:underline}
-.tl{display:flex;flex-direction:column;gap:6px;max-height:230px;overflow:auto}
-.tl .dh{font-size:11px;color:var(--ink3);font-weight:600;margin:2px 0 2px}
-.tl .te{display:flex;gap:6px;align-items:center;padding:3px 0;cursor:pointer;min-width:0}
-.tl .te .tt{font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-.tl .te:hover .tt{color:var(--acc)}
-.tl .el{flex:none;font-size:10.5px;padding:1px 6px;border-radius:99px;background:color-mix(in srgb,var(--purple) 14%,transparent);color:var(--purple);font-weight:500}
-.tl .el.end{background:color-mix(in srgb,var(--red) 14%,transparent);color:var(--red)}
-.tl .more2{color:var(--ink3);font-size:11px}
+.rk.upl li.dh{display:block;font-size:11px;color:var(--ink3);font-weight:600;padding:8px 0 2px;border-top:0;cursor:default}
+.rk.upl li.dh:first-child{padding-top:0}
+.rk.upl li.dh+li{border-top:0}
+.rk.upl .n{width:6px;height:6px;border-radius:50%;background:var(--line);padding:0}
+.rk.upl li.more2 .tt{color:var(--ink3);font-size:11.5px;font-weight:400}
 @media (max-width:1024px){#ins.home{grid-template-columns:1fr 1fr}#ins.home .card:nth-child(3){display:block}}
 @media (max-width:640px){#ins.home{grid-template-columns:1fr}#ins.home .card:nth-child(2),#ins.home .card:nth-child(3){display:block}#ins.home .card:nth-child(4),#ins.home .card:nth-child(5){display:none}}
 
 #ins.home .card{display:flex;flex-direction:column;max-height:330px}
-#ins.home .card>.rk,#ins.home .card>.tl{overflow:auto;min-height:0;flex:1}
+#ins.home .card>.rk{overflow:auto;min-height:0;flex:1}
 #ins.home .card .foot{flex:none}
 .alist .al .tg{margin-left:6px;font-size:10.5px;color:var(--ink3);font-weight:400}
 .alist .al.grp:hover .tg{color:var(--acc)}
@@ -1207,7 +1204,8 @@ function upcoming(){
   }
   const star=n=>n.starred||(n.pre&&n.pre.starred);
   ev.sort((a,b)=>a.d.localeCompare(b.d)||(star(b.n)-star(a.n)));
-  const by={};for(const e of ev)(by[e.d]=by[e.d]||[]).push(e);
+  const by={}, seen=new Set();
+  for(const e of ev){const id=e.d+"|"+e.n.key+"|"+(e.l==="제출마감"?"마감":e.l);if(seen.has(id))continue;seen.add(id);(by[e.d]=by[e.d]||[]).push(e);}
   return by;
 }
 /* ── 인사이트 카드: 마감 임박 TOP / 추정가격 TOP / 이번 주 현황 ── */
@@ -1248,7 +1246,7 @@ function renderInsights(){
     ${tdNew.length?`<ol class="rk">${tdNew.map((n,i)=>li(n,i,n.pre?'<span class="ddc pre">사전→본</span>':ddChip(n))).join("")}</ol>`:'<div class="rk none">오늘·어제 들어온 키워드 본공고가 없습니다.</div>'}
     ${tdPre?`<p class="foot">오늘 새 사전규격 <b>${tdPre}건</b> → <span class="lnk2" data-go="pre">사전규격 보기</span></p>`:""}</div>
   <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--purple) 18%,transparent)">📅</span>다가오는 일정 · 7일 <span class="more" data-go="new" data-due="7">이번 주 마감 ›</span></h3>
-    ${upDays.length?`<div class="tl">${upDays.map(d=>`<div class="td"><div class="dh">${dlab(d)}</div>${UP[d].slice(0,4).map(e=>`<div class="te" data-key="${esc(e.n.key)}" data-tab="sched"><span class="el ${e.l==="마감"?"end":""}">${e.l}</span><span class="tt">${(e.n.starred||(e.n.pre&&e.n.pre.starred))?"★ ":""}${esc(e.n.title)}</span></div>`).join("")}${UP[d].length>4?`<div class="te more2" data-go="new" data-due="7">외 ${UP[d].length-4}건</div>`:""}</div>`).join("")}</div>`:'<div class="rk none">7일 안에 마감·현장설명·질의마감 일정이 없습니다.</div>'}</div>
+    ${upDays.length?`<ol class="rk upl">${upDays.map(d=>`<li class="dh">${dlab(d)}</li>`+UP[d].slice(0,4).map(e=>`<li data-key="${esc(e.n.key)}" data-tab="sched"><span class="n"></span><div style="min-width:0"><div class="tt">${isSt(e.n)?"★ ":""}${esc(e.n.title)}</div><div class="s">${esc(shortInst(instOf(e.n)))}${(e.n.estimated_price||e.n.budget)?" · 추정 "+eok(e.n.estimated_price||e.n.budget):""}</div></div><span class="ddc ${e.l==="마감"?(e.n.dd<=1?"d0":e.n.dd<=3?"hot":""):"pre"}">${e.l}</span></li>`).join("")+(UP[d].length>4?`<li class="more2" data-go="new" data-due="7"><span class="n"></span><div class="tt">외 ${UP[d].length-4}건 · 이번 주 마감 ›</div></li>`:"")).join("")}</ol>`:'<div class="rk none">7일 안에 마감·현장설명·질의마감 일정이 없습니다.</div>'}</div>
   <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--red) 18%,transparent)">🔥</span>마감 임박 TOP ${pool.length} <span class="more" data-go="new" data-due="7">${star.length?"★ 관심 공고 우선":"키워드 공고 기준"} · 이번 주 마감 ›</span></h3>
     ${pool.length?`<ol class="rk">${pool.map((n,i)=>li(n,i,ddChip(n))).join("")}</ol>`:'<div class="rk none">마감이 남은 공고가 없습니다.</div>'}</div>
   <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--green) 18%,transparent)">💸</span>추정가격 TOP ${top.length} <span class="more" data-sort="amtd">최근 ${NEW_DAYS}일 · 금액순 보기 ›</span></h3>
