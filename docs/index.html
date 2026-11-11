@@ -715,7 +715,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
     <span class="tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
   </div>
   <div class="nav" id="nav">
-    <button class="it on" data-view="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 10-12h-8Z"/></svg>신규 공고<span class="n" id="n-new"></span></button>
+    <button class="it on" data-view="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>홈<span class="n" id="n-new"></span></button>
     <button class="it" data-view="pre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 9h8M8 13h5"/></svg>사전규격<span class="n" id="n-pre"></span></button>
     <button class="it" data-view="matched"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>관심 공고<span class="n" id="n-matched"></span></button>
     <button class="it" data-view="all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>전체<span class="n" id="n-all"></span></button>
@@ -796,7 +796,8 @@ let CONFIG_HEAD="";
 let NOW=new Date(BUILT);
 let TODAY=BUILT.slice(0,10);
 const LS_KW="bidmon.kw",LS_S="bidmon.filters2";
-const VIEWS={new:"신규 공고",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
+const VIEWS={new:"홈",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
+const VTITLE={new:"홈 · 신규 공고 "+"(최근 10일)",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
 const NEW_DAYS=10;   // 신규 공고: 최근 N일 내 처음 수집된 공고
 const LS_STAR="bidmon.star";
 const $=id=>document.getElementById(id);
@@ -1055,14 +1056,14 @@ function renderMatched(rows,el){
 function render(){
   counts();
   const rows=DATA.filter(n=>base(n)&&inView(n,S.view)&&hasTag(n,S.tag));
-  $("vtitle").textContent=VIEWS[S.view];
+  $("vtitle").textContent=VTITLE[S.view]||VIEWS[S.view];
   $("count").textContent=rows.length.toLocaleString();
   const el=$("list");
+  renderInsights();
   if(!rows.length){
     el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.src==="dept"&&!DEPTKW&&S.view!=="all")?"부서 키워드가 아직 없습니다. [키워드 편집]에서 입력하거나, 왼쪽 [회사 기본값]을 선택하세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":"조건에 맞는 공고가 없습니다."))+'</div>';
     return;
   }
-  renderInsights();
   if(S.view==="matched"){renderMatched(rows,el);el.scrollTop=0;return;}
   if(S.sort){   // 정렬 선택 시: 그룹 없이 표처럼 한 줄로
     const amtOf=n=>n.estimated_price||n.budget||0;
@@ -1104,7 +1105,7 @@ function theadHTML(){
 /* ── 인사이트 카드: 마감 임박 TOP / 추정가격 TOP / 이번 주 현황 ── */
 function renderInsights(){
   const el=$("ins");
-  if(S.view==="all"||S.view==="pre"){el.hidden=true;el.classList.remove("mini");return;}
+  if(S.view!=="new"){el.hidden=true;el.classList.remove("mini");return;}          // 카드는 홈에서만
   if(!S.ins){el.classList.add("mini");el.innerHTML='<span class="more" id="insTg">▸ 마감 임박 · 추정가격 TOP · 현황 카드 펼치기</span>';el.hidden=false;return;}
   el.classList.remove("mini");
   const live=DATA.filter(n=>!n.orphan);
@@ -1737,7 +1738,7 @@ function exportRows(){
   const H=["구분","공고명","업무구분","수요기관","공고기관","분류","기관태그","배정예산(원)","추정가격(원)","공고번호","공고일시","마감일시","D-day","낙찰방법","공고종류","일치 키워드","처음 수집","링크"];
   const out=rows.map(n=>[n.isPre?"사전규격":"입찰공고",n.title,n.service_div||"",instOf(n),n.institution||"",n.category||"",n.tags||"",won(n.budget),won(n.estimated_price),
     n.notice_no,n.notice_date||"",n.close_date||"",n.dd==null?"":n.dd,n.award_method||"",n.notice_kind||"",n.mk||"",n.first_seen||"",n.isPre?preUrl(n):bidUrl(n)]);
-  return {H,out,name:VIEWS[S.view]};
+  return {H,out,name:S.view==="new"?"신규 공고":VIEWS[S.view]};
 }
 async function exportXlsx(){
   const {H,out,name}=exportRows();
