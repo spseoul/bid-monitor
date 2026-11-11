@@ -730,6 +730,19 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .tl .more2{color:var(--ink3);font-size:11px}
 @media (max-width:1024px){#ins.home{grid-template-columns:1fr 1fr}#ins.home .card:nth-child(3){display:block}}
 @media (max-width:640px){#ins.home{grid-template-columns:1fr}#ins.home .card:nth-child(2),#ins.home .card:nth-child(3){display:block}#ins.home .card:nth-child(4),#ins.home .card:nth-child(5){display:none}}
+
+#ins.home .card{display:flex;flex-direction:column;max-height:330px}
+#ins.home .card>.rk,#ins.home .card>.tl{overflow:auto;min-height:0;flex:1}
+#ins.home .card .foot{flex:none}
+.alist .al .tg{margin-left:6px;font-size:10.5px;color:var(--ink3);font-weight:400}
+.alist .al.grp:hover .tg{color:var(--acc)}
+.alist li.sub{display:block;padding:0 0 4px 26px;border-top:0;cursor:default}
+.alist li.sub ul{list-style:none;margin:0;padding:0}
+.alist li.sub li{display:flex;gap:6px;align-items:center;padding:3px 0;cursor:pointer;min-width:0}
+.alist li.sub li .tt{font-size:12px;font-weight:400;flex:1}
+.alist li.sub li:hover .tt{color:var(--acc)}
+.alist li.sub li.more2{color:var(--ink3);font-size:11px}
+@media (max-width:640px){#ins.home .card{max-height:none}}
 </style>
 </head>
 <body>
@@ -1139,21 +1152,28 @@ function homeAlerts(){
   const live=DATA.filter(n=>!n.orphan), m=live.filter(n=>n.matched), A=[];
   const d3=new Date(new Date(TODAY+"T00:00:00").getTime()-2*864e5).toISOString().slice(0,10);
   const isStar=n=>n.starred||(n.pre&&n.pre.starred);
+  const uniq=arr=>{const seen=new Set();return arr.filter(n=>{const t=norm(n.title);if(seen.has(t))return false;seen.add(t);return true;});};
+  // 묶음 알림: 같은 종류가 여러 건이면 한 줄 + 펼치기. k 는 날짜 단위로 고정해 '확인' 이 하루 유지되게
+  const grp=(k,lvl,ico,t,items,opt={})=>{if(!items.length)return;A.push(Object.assign({k:k+":"+TODAY+":"+items.length,lvl,ico,t:t.replace("{n}",items.length),items,key:items.length===1?items[0].key:null},opt));};
+  // 1 관심 공고 마감 (개별 — 가장 중요)
   for(const n of live.filter(n=>!n.isPre&&isStar(n)&&n.dd!==null&&n.dd>=0&&n.dd<=3).sort((a,b)=>a.dd-b.dd))
-    A.push({k:"due:"+n.key,lvl:n.dd<=1?"red":"amb",ico:"⏰",t:`관심 공고 마감 ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title,key:n.key,tab:"sched"});
-  for(const n of m.filter(n=>!n.isPre&&n.pre&&(n.first_seen||"")>=d3))
-    A.push({k:"cv:"+n.key,lvl:n.pre.starred?"amb":"blu",ico:"🔁",t:(n.pre.starred?"관심 사전규격":"사전규격")+" → 본공고 올라옴",s:n.title,key:n.key});
-  for(const n of m.filter(n=>!n.isPre&&(n.isRe||/정정|변경/.test((n.notice_kind||"")+(n.title||"")))&&(n.first_seen||"")>=d3&&!n.pre))
-    A.push({k:"re:"+n.key,lvl:"blu",ico:"🔄",t:n.isRe?"재공고":"정정·변경 공고",s:n.title,key:n.key});
-  const tdB=m.filter(n=>!n.isPre&&n.isToday), tdP=m.filter(n=>n.isPre&&!n.bid&&n.isToday);
-  if(tdB.length)A.push({k:"today:b:"+TODAY,lvl:"blu",ico:"✨",t:`오늘 새 본공고 ${tdB.length}건`,s:tdB.slice(0,3).map(n=>n.title).join(" · ")+(tdB.length>3?" 외":""),go:"new"});
-  if(tdP.length)A.push({k:"today:p:"+TODAY,lvl:"blu",ico:"📝",t:`오늘 새 사전규격 ${tdP.length}건`,s:tdP.slice(0,3).map(n=>n.title).join(" · ")+(tdP.length>3?" 외":""),go:"pre"});
+    A.push({k:"due:"+n.key+":"+n.dd,lvl:n.dd<=1?"red":"amb",ico:"⏰",t:`관심 공고 마감 ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title,key:n.key,tab:"sched"});
+  // 2 사전규격 → 본공고 (관심 사전규격은 개별, 나머지는 묶음)
+  const cv=uniq(m.filter(n=>!n.isPre&&n.pre&&(n.first_seen||"")>=d3));
+  for(const n of cv.filter(n=>n.pre.starred))A.push({k:"cv:"+n.key,lvl:"amb",ico:"🔁",t:"관심 사전규격 → 본공고 올라옴",s:n.title,key:n.key});
+  grp("cv","blu","🔁","사전규격 → 본공고 {n}건",cv.filter(n=>!n.pre.starred),{go:"new",st:"cv",s:"최근 3일 · 키워드 공고"});
+  // 3 재공고·정정
+  grp("re","blu","🔄","재공고·정정 {n}건",uniq(m.filter(n=>!n.isPre&&(n.isRe||/정정|변경/.test(n.notice_kind||""))&&(n.first_seen||"")>=d3&&!n.pre)),{go:"new",s:"최근 3일 · 키워드 공고"});
+  // 4 오늘 신규
+  grp("today:b","blu","✨","오늘 새 본공고 {n}건",m.filter(n=>!n.isPre&&n.isToday),{go:"new",s:"키워드 일치"});
+  grp("today:p","blu","📝","오늘 새 사전규격 {n}건",m.filter(n=>n.isPre&&!n.bid&&n.isToday),{go:"pre",s:"키워드 일치"});
+  // 5 사전규격 의견등록 마감
   const pe=m.filter(n=>n.isPre&&!n.bid&&n.dd!==null&&n.dd>=0&&n.dd<=2);
-  for(const n of pe.filter(n=>n.starred))A.push({k:"pre:"+n.key,lvl:"amb",ico:"💬",t:`관심 사전규격 의견등록 마감 ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title,key:n.key});
-  const peN=pe.filter(n=>!n.starred).length; if(peN)A.push({k:"pre:n:"+TODAY,lvl:"gry",ico:"💬",t:`사전규격 의견등록 마감 임박 ${peN}건`,s:"체크하지 않은 사전규격",go:"pre"});
-  for(const n of m.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&(n.inf&&n.inf.jury&&n.inf.jury.members&&n.inf.jury.members.length)&&(n.info_tried||"")>=d3))
-    A.push({k:"jury:"+n.key,lvl:"gry",ico:"👥",t:`심사위원 명단 확보 (${n.inf.jury.members.length}명)`,s:n.title,key:n.key,tab:"jury"});
-  // 시스템
+  for(const n of pe.filter(n=>n.starred))A.push({k:"pre:"+n.key+":"+n.dd,lvl:"amb",ico:"💬",t:`관심 사전규격 의견등록 마감 ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title,key:n.key});
+  grp("pre:n","gry","💬","사전규격 의견등록 마감 임박 {n}건",pe.filter(n=>!n.starred),{go:"pre",s:"체크하지 않은 사전규격 · D-2 이내"});
+  // 6 심사위원
+  grp("jury","gry","👥","심사위원 명단 확보 {n}건",m.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&(n.inf&&n.inf.jury&&n.inf.jury.members&&n.inf.jury.members.length)&&(n.info_tried||"")>=d3),{tab:"jury",s:"최근 3일에 공고문에서 추출"});
+  // 7 시스템
   const ago=(new Date()-new Date(BUILT))/36e5, d=new Date(), biz=d.getDay()>=1&&d.getDay()<=5&&d.getHours()>=9&&d.getHours()<=18;
   if(biz?ago>2.5:ago>26)A.push({k:"sys:stale:"+BUILT,lvl:"red",ico:"⚠️",t:`수집이 ${fmtAgo(new Date()-new Date(BUILT))} 멈춰 있음`,s:"갱신 표시를 눌러 점검 창에서 확인",chk:1});
   const d7=new Date(new Date(TODAY+"T00:00:00").getTime()-7*864e5).toISOString().slice(0,10), d14=new Date(new Date(TODAY+"T00:00:00").getTime()-14*864e5).toISOString().slice(0,10);
@@ -1162,6 +1182,7 @@ function homeAlerts(){
   if(dead.length)A.push({k:"sys:dead:"+dead.join(",")+":"+TODAY.slice(0,7),lvl:"amb",ico:"⚠️",t:`수집처 멈춤 의심: ${dead.join(", ")}`,s:"최근 7일 0건 · 점검 창에서 확인",chk:1});
   return A;
 }
+let AL_OPEN={}, AL_SHOWSEEN=false;
 const alUnseen=()=>homeAlerts().filter(a=>!ALSEEN[a.k]).length;
 function alSeen(keys){const t=Date.now();for(const k of keys)ALSEEN[k]=t;for(const k of Object.keys(ALSEEN))if(t-ALSEEN[k]>30*864e5)delete ALSEEN[k];save(LS_AL,ALSEEN);}
 /* 다가오는 일정 7일: 마감·현장설명·질의마감·참가등록·제출 (키워드 공고, 관심 공고 우선) */
@@ -1197,16 +1218,23 @@ function renderInsights(){
   const late=live.filter(n=>n.isPre&&n.starred&&!n.bid&&n.dd!==null&&n.dd<-14).length;
   const li=(n,i,right)=>`<li data-key="${esc(n.key)}"><span class="n">${i+1}</span><div style="min-width:0"><div class="tt">${isSt(n)?"★ ":""}${esc(n.title)}</div><div class="s">${(n.estimated_price||n.budget)?"추정 "+eok(n.estimated_price||n.budget)+" · ":""}${esc(shortInst(instOf(n)))}${n.close_date?" · 마감 "+n.close_date.slice(5,10):""}</div></div>${right}</li>`;
   const AL=homeAlerts(), unseen=AL.filter(a=>!ALSEEN[a.k]);
-  const tdNew=bids.filter(n=>n.matched&&(n.first_seen||"")>=new Date(new Date(TODAY+"T00:00:00").getTime()-864e5).toISOString().slice(0,10)).sort((a,b)=>(b.first_seen||"").localeCompare(a.first_seen||"")||((b.estimated_price||b.budget||0)-(a.estimated_price||a.budget||0))).slice(0,7);
-  const tdPre=live.filter(n=>n.matched&&n.isPre&&!n.bid&&n.isToday).length;
+  const tdNew=bids.filter(n=>n.matched&&(n.first_seen||"")>=new Date(new Date(TODAY+"T00:00:00").getTime()-864e5).toISOString().slice(0,10)).sort((a,b)=>(b.first_seen||"").localeCompare(a.first_seen||"")||((b.estimated_price||b.budget||0)-(a.estimated_price||a.budget||0))).slice(0,5);
+  const tdPre=live.filter(n=>n.matched&&n.isPre&&!n.bid&&n.isToday).length, tdAll=bids.filter(n=>n.matched&&(n.first_seen||"")>=new Date(new Date(TODAY+"T00:00:00").getTime()-864e5).toISOString().slice(0,10)).length;
   const UP=upcoming(), upDays=Object.keys(UP);
   const dlab=d=>{const x=new Date(d+"T00:00:00");const w="일월화수목금토"[x.getDay()];const diff=Math.round((x-new Date(TODAY+"T00:00:00"))/864e5);return `${d.slice(5).replace("-",".")} (${w})${diff===0?" 오늘":diff===1?" 내일":""}`;};
-  const alLi=a=>`<li class="al ${a.lvl}${ALSEEN[a.k]?" seen":""}" data-al="${esc(a.k)}"${a.key?` data-key="${esc(a.key)}"${a.tab?` data-tab="${a.tab}"`:""}`:a.go?` data-go="${a.go}"`:a.chk?` data-chk="1"`:""}><span class="ic">${a.ico}</span><div style="min-width:0"><div class="tt">${esc(a.t)}</div><div class="s">${esc(a.s)}</div></div><span class="ok" data-alok="${esc(a.k)}" title="확인함">✓</span></li>`;
+  const alLi=a=>{
+    const many=a.items&&a.items.length>1, open=many&&AL_OPEN[a.k];
+    const act=a.key?` data-key="${esc(a.key)}"${a.tab?` data-tab="${a.tab}"`:""}`:many?` data-altg="${esc(a.k)}"`:a.go?` data-go="${a.go}"${a.st?` data-st="${a.st}"`:""}`:a.chk?` data-chk="1"`:"";
+    return `<li class="al ${a.lvl}${ALSEEN[a.k]?" seen":""}${many?" grp":""}" data-al="${esc(a.k)}"${act}><span class="ic">${a.ico}</span><div style="min-width:0"><div class="tt">${esc(a.t)}${many?`<span class="tg">${open?"접기":"펼치기"}</span>`:""}</div><div class="s">${esc(a.s||"")}</div></div><span class="ok" data-alok="${esc(a.k)}" title="${ALSEEN[a.k]?"확인함":"확인 처리"}">✓</span></li>`+
+      (open?`<li class="sub"><ul>${a.items.slice(0,8).map(n=>`<li data-key="${esc(n.key)}"${a.tab?` data-tab="${a.tab}"`:""}><span class="tt">${esc(n.title)}</span>${ddChip(n)}</li>`).join("")}${a.items.length>8?`<li class="more2" data-go="${a.go||"new"}"${a.st?` data-st="${a.st}"`:""}>외 ${a.items.length-8}건 — 목록에서 보기 ›</li>`:""}</ul></li>`:"");
+  };
+  const alShow=AL_SHOWSEEN?AL:unseen, alSeenN=AL.length-unseen.length;
   el.classList.add("home");
   el.innerHTML=`
   <div class="card c-al"><h3><span class="i" style="background:color-mix(in srgb,var(--red) 18%,transparent)">🔔</span>오늘 확인할 것 ${unseen.length?`<span class="cnt">${unseen.length}</span>`:""}<span class="more" data-alall="1">${AL.length?"모두 확인 ›":""}</span></h3>
-    ${AL.length?`<ul class="rk alist">${AL.map(alLi).join("")}</ul>`:'<div class="rk none">새로 확인할 것이 없습니다. 관심 공고 마감·사전규격 전환·재공고·오늘 신규가 생기면 여기에 뜹니다.</div>'}</div>
-  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--blue) 18%,transparent)">✨</span>오늘·어제 신규 본공고 ${tdNew.length} <span class="more" data-go="new">최근 ${NEW_DAYS}일 전체 ›</span></h3>
+    ${alShow.length?`<ul class="rk alist">${alShow.map(alLi).join("")}</ul>`:`<div class="rk none">${AL.length?"모두 확인했습니다.":"새로 확인할 것이 없습니다. 관심 공고 마감·사전규격 전환·재공고·오늘 신규가 생기면 여기에 뜹니다."}</div>`}
+    ${alSeenN?`<p class="foot"><span class="lnk2" data-alshow="1">${AL_SHOWSEEN?"확인한 항목 숨기기":`확인한 항목 ${alSeenN}개 다시 보기`}</span></p>`:""}</div>
+  <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--blue) 18%,transparent)">✨</span>오늘·어제 신규 본공고 ${tdAll} <span class="more" data-go="new">${tdAll>tdNew.length?`외 ${tdAll-tdNew.length}건 · `:""}신규 공고 전체 ›</span></h3>
     ${tdNew.length?`<ol class="rk">${tdNew.map((n,i)=>li(n,i,n.pre?'<span class="ddc pre">사전→본</span>':ddChip(n))).join("")}</ol>`:'<div class="rk none">오늘·어제 들어온 키워드 본공고가 없습니다.</div>'}
     ${tdPre?`<p class="foot">오늘 새 사전규격 <b>${tdPre}건</b> → <span class="lnk2" data-go="pre">사전규격 보기</span></p>`:""}</div>
   <div class="card"><h3><span class="i" style="background:color-mix(in srgb,var(--purple) 18%,transparent)">📅</span>다가오는 일정 · 7일 <span class="more" data-go="new" data-due="7">이번 주 마감 ›</span></h3>
@@ -1862,12 +1890,13 @@ document.addEventListener("click",e=>{
   const ins=e.target.closest("#ins");
   if(ins){
     if(e.target.closest("#insTg")){S.ins=S.ins?0:1;save(LS_S,S);renderInsights();return;}
-    const ok=e.target.closest("[data-alok]");if(ok){alSeen([ok.dataset.alok]);renderInsights();counts();return;}
+    const ok=e.target.closest("[data-alok]");if(ok){if(ALSEEN[ok.dataset.alok]){delete ALSEEN[ok.dataset.alok];save(LS_AL,ALSEEN);}else alSeen([ok.dataset.alok]);renderInsights();counts();return;}
     if(e.target.closest("[data-alall]")){alSeen(homeAlerts().map(a=>a.k));renderInsights();counts();return;}
+    if(e.target.closest("[data-alshow]")){AL_SHOWSEEN=!AL_SHOWSEEN;renderInsights();return;}
+    const tg=e.target.closest("[data-altg]");if(tg){AL_OPEN[tg.dataset.altg]=!AL_OPEN[tg.dataset.altg];renderInsights();return;}
     if(e.target.closest("[data-chk]")){openCheck();return;}
-    const al=e.target.closest(".al[data-al]");if(al){alSeen([al.dataset.al]);}
-    const li=e.target.closest("[data-key]");if(li){openDetail(li.dataset.key,li.dataset.tab||undefined);if(al){renderInsights();counts();}return;}
-    const go=e.target.closest("[data-go]");if(go){if(al){renderInsights();counts();}S.view=go.dataset.go;S.f.status=go.dataset.due?"week":(S.f.status==="week"?"open":S.f.status);S.sort="";update();return;}
+    const li=e.target.closest("[data-key]");if(li){openDetail(li.dataset.key,li.dataset.tab||undefined);return;}
+    const go=e.target.closest("[data-go]");if(go){if(go.dataset.st){S.f.status=go.dataset.st;}S.view=go.dataset.go;S.f.status=go.dataset.due?"week":(S.f.status==="week"?"open":S.f.status);S.sort="";update();return;}
     const sr=e.target.closest("[data-sort]");if(sr){S.view="new";S.sort=sr.dataset.sort;update();return;}
     return;
   }
