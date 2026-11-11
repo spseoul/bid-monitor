@@ -680,6 +680,33 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   #fd .ft{padding-bottom:calc(12px + env(safe-area-inset-bottom))}
   .fchips{display:none}
 }
+
+/* ── 수집 점검 패널 ── */
+.asof{cursor:pointer}.asof:hover{color:var(--ink2)}
+#chk{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.32);padding:16px}
+#chk.open{display:flex}
+#chk .box{background:var(--panel,var(--bg));border:1px solid var(--line);border-radius:14px;width:min(640px,100%);max-height:90vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
+#chk h3{margin:0 0 4px;font-size:15px;display:flex;align-items:center;gap:8px}
+#chk h3 .x{margin-left:auto;border:0;background:none;color:var(--ink3);font-size:18px;cursor:pointer}
+#chk .sub{color:var(--ink3);font-size:11.5px;margin-bottom:14px}
+#chk .kv{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:8px;margin:10px 0}
+#chk .kv div{background:var(--on);border-radius:8px;padding:8px 10px}
+#chk .kv b{display:block;font-size:15px;font-weight:600}#chk .kv span{font-size:11px;color:var(--ink3)}
+#chk .ok{color:var(--green)}#chk .warn{color:var(--orange)}#chk .bad{color:var(--red)}
+#chk h4{font-size:12.5px;margin:16px 0 6px;color:var(--ink2)}
+#chk .bars{display:flex;align-items:flex-end;gap:2px;height:64px;border-bottom:1px solid var(--line)}
+#chk .bars i{flex:1;background:var(--acc);border-radius:2px 2px 0 0;min-height:1px;opacity:.85;position:relative}
+#chk .bars i.z{background:var(--red);min-height:3px}#chk .bars i.we{opacity:.35}
+#chk .bars i:hover::after{content:attr(data-t);position:absolute;bottom:100%;left:50%;transform:translateX(-50%);background:var(--ink);color:var(--bg);font-size:10.5px;padding:2px 6px;border-radius:4px;white-space:nowrap;margin-bottom:4px}
+#chk .lbl{display:flex;justify-content:space-between;font-size:10.5px;color:var(--ink3);margin-top:3px}
+#chk table{width:100%;border-collapse:collapse;font-size:12px}#chk td,#chk th{padding:5px 6px;border-bottom:1px solid var(--line2);text-align:right}
+#chk td:first-child,#chk th:first-child{text-align:left}#chk th{color:var(--ink3);font-weight:500;font-size:11px}
+#chk .note{font-size:11.5px;color:var(--ink3);line-height:1.6;margin-top:12px}
+#chk .btns{display:flex;gap:8px;margin-top:14px}
+#chk .btns button{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:7px 12px;font-size:12.5px;cursor:pointer}
+#chk .btns button.pri2{background:var(--acc);border-color:var(--acc);color:#fff}
+#newdata{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:65;background:var(--ink);color:var(--bg);padding:9px 14px;border-radius:999px;font-size:12.5px;display:none;gap:10px;align-items:center;box-shadow:0 8px 24px rgba(0,0,0,.25)}
+#newdata.on{display:flex}#newdata button{border:0;background:var(--acc);color:#fff;border-radius:999px;padding:4px 10px;font-size:12px;cursor:pointer}
 </style>
 </head>
 <body>
@@ -744,6 +771,8 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   <div class="list" id="list"></div>
 </main>
 <div id="dim"></div>
+<div id="chk" role="dialog" aria-modal="true"><div class="box" id="chkBox"></div></div>
+<div id="newdata"><span id="newdataTxt">새 수집 결과가 있습니다</span><button onclick="location.reload()">새로고침</button></div>
 <div id="lock" class="open boot" aria-hidden="true"><div class="lk"><span class="logo"></span></div></div>
 <section id="dv" aria-hidden="true"><div class="hd"><h2>부서별 관심 현황</h2><span class="cnt" id="dvCnt"></span><span class="r"><button class="x" id="dvClose" title="닫기">×</button></span></div><div class="bd" id="dvBody"></div></section>
 <section id="ac" aria-hidden="true">
@@ -1308,6 +1337,8 @@ function openDetail(key,tab){
   const info=Object.assign({},dInfo(pre),dInfo(bid));            // 본공고 정보가 사전규격 정보를 덮음
   const files=[...dFiles(bid),...dFiles(pre).filter(f=>!dFiles(bid).some(g=>g.url===f.url))];
   const jury=info.jury||null, sched=info.schedule||{};
+  const diag=(bid&&bid.info_diag)||(pre&&pre.info_diag)||"", tried=(bid&&bid.info_tried)||(pre&&pre.info_tried)||"";
+  const procMsg=diag?`공고문 처리 결과${tried?` (${esc(tried)})`:""}: ${esc(diag)}`:(files.length?"공고문을 아직 읽지 않았습니다. 수집 때마다 최근 공고부터 순서대로 읽습니다 (1시간 안팎).":"첨부가 없어 읽을 공고문이 없습니다.");
   const target=(pre&&pre.starred)?pre:(bid&&bid.starred)?bid:(pre||bid);
   const url=bid?bid.url:preUrl(pre);
   // 머리: 아이콘 액션 · 제목 · 배지
@@ -1370,13 +1401,14 @@ function openDetail(key,tab){
   }else if(D_TAB==="files"){
     h+=files.length?'<ul class="att">'+files.map(f=>{const [lab,cls]=extOf(f.name);return `<li><a href="${esc(f.url)}" target="_blank" rel="noopener"><span class="ext2 ${cls}">${lab}</span><span class="nm">${esc(f.name||f.url)}<small>${/공고/.test(f.name||"")?"공고문":/지침|안내/.test(f.name||"")?"지침서":/과업|내용서|지시서/.test(f.name||"")?"과업지시서":/도면|현황|측량/.test(f.name||"")?"도면·현황":"첨부"}</small></span>${I.dl}</a></li>`;}).join("")+'</ul>'
       :`<div class="ai none" style="margin-top:14px">첨부파일 목록이 없습니다. ${main.isPre?"사전규격은 나라장터에서 직접 확인하세요.":"다음 수집부터 나라장터 첨부(공고문·규격서)가 함께 저장됩니다."}</div>`;
+    if(files.length)h+=`<p class="hint2">${procMsg}</p>`;
     h+=`<p class="hint2">파일은 나라장터·기관 홈페이지에서 직접 내려받습니다. 열리지 않으면 <a href="${esc(url)}" target="_blank" rel="noopener">원문 페이지</a>에서 받아 주세요.</p>`;
   }else if(D_TAB==="jury"){
     if(jury&&jury.members&&jury.members.length){
       h+='<ul class="jury">'+jury.members.map(m=>`<li><span class="av2">${esc((m.name||"?").slice(0,1))}</span><div><div class="nm">${esc(m.name)}${m.role?` <span class="bg" style="margin-left:4px">${esc(m.role)}</span>`:""}</div><div class="org">${esc(m.org||"")}</div></div></li>`).join("")+'</ul>';
       h+=`<p class="hint2">첨부 공고문의 "심사위원" 항목에서 자동 추출한 명단입니다${jury.note?` (공고문 표기: ${esc(jury.note)})`:""}. 정확한 명단은 원문으로 확인하세요.</p>`;
     }else{
-      h+=`<div class="ai none" style="margin-top:14px"><b>${I.ppl}심사위원</b>${jury&&jury.note?`공고문 표기: <b style="display:inline;color:var(--ink)">${esc(jury.note)}</b> — 설계공모 운영지침상 작품접수 전 공개되는 경우가 많습니다.`:(info.summary?"공고문에 심사위원 항목이 없습니다.":"아직 공고문이 처리되지 않았거나 첨부가 없습니다.")}</div>`;
+      h+=`<div class="ai none" style="margin-top:14px"><b>${I.ppl}심사위원</b>${jury&&jury.note?`공고문 표기: <b style="display:inline;color:var(--ink)">${esc(jury.note)}</b> — 설계공모 운영지침상 작품접수 전 공개되는 경우가 많습니다.`:(info.summary&&!/명단 미인식/.test(diag)?"공고문에 심사위원 명단이 없습니다.":"")}<div class="hint2" style="margin-top:6px">${procMsg}</div></div>`;
       h+=`<p class="hint2">확인 경로: <a href="${esc(url)}" target="_blank" rel="noopener">공고 원문</a> · <a href="https://www.hub.go.kr" target="_blank" rel="noopener">건축HUB</a>${/서울|SH/.test((main.institution||"")+(main.tags||""))?' · <a href="https://project.seoul.go.kr" target="_blank" rel="noopener">프로젝트 서울</a>':""}</p>`;
     }
   }
@@ -2107,7 +2139,7 @@ async function loadData(){
       syncSrc();                                             // 부서 메뉴/내 키워드 표시를 먼저 맞춘 뒤 커버를 내림
       $("lock").classList.remove("open","boot");
     }
-    DEFAULT_KW=normKW(m.kw)||DEFAULT_KW; BUILT=m.built||BUILT; NOW=new Date(BUILT); TODAY=BUILT.slice(0,10);
+    DEFAULT_KW=normKW(m.kw)||DEFAULT_KW; BUILT=m.built||BUILT; NOW=new Date(BUILT); TODAY=BUILT.slice(0,10); LAST_VER=m.ver||null;
     CONFIG_HEAD=m.config_head||""; HEAD=CONFIG_HEAD; ADMIN_HASH=m.admin_hash||""; GH_REPO=m.github_repo||""; GH_PATH=m.github_config_path||""; TOKEN_ENC=m.admin_token_enc||"";
     $("asofDate").textContent=(m.date||BUILT.replace("T"," ").slice(0,16));
     fillKw();
@@ -2131,6 +2163,72 @@ async function loadData(){
 }
 loadData();
 /* ── PWA: 홈 화면 추가 + 오프라인 캐시 ── */
+
+/* ── 수집 점검: 갱신 표시 클릭 → 최근 30일 데이터가 제대로 들어왔는지 스스로 검수 ── */
+const SRC_NAME={g2b:"나라장터",g2b_pre:"나라장터 사전규격",lh:"LH 전자조달",lh_board:"LH 공모게시판",seoul_cleanup:"서울 정비사업",busan_dynamice:"부산 정비사업",sh_board:"SH 게시판",gh_board:"GH 게시판"};
+function srcOf(n){const k=(n.key||"").split("|")[0].split(":")[0];return n.isPre&&k==="g2b"?"g2b_pre":k;}
+function fmtAgo(ms){const h=ms/36e5;return h<1?Math.round(h*60)+"분 전":h<48?Math.round(h*10)/10+"시간 전":Math.round(h/24)+"일 전";}
+function openCheck(){
+  const now=new Date(), built=new Date(BUILT), ago=now-built, agoH=ago/36e5;
+  const day=now.getDay(), hr=now.getHours(), biz=day>=1&&day<=5&&hr>=9&&hr<=18;
+  const stale=biz?agoH>2.5:agoH>26;
+  const dates=DATA.map(n=>(n.notice_date||"").slice(0,10)).filter(Boolean).sort();
+  const dmin=dates[0]||"-", dmax=dates[dates.length-1]||"-";
+  const cut=new Date(built);cut.setDate(cut.getDate()-30);const cutS=cut.toISOString().slice(0,10);
+  // 일별 건수 (최근 30일)
+  const per={};for(const d of dates)per[d]=(per[d]||0)+1;
+  const days=[];for(let i=29;i>=0;i--){const d=new Date(built);d.setDate(d.getDate()-i);const k=d.toISOString().slice(0,10);days.push([k,per[k]||0,d.getDay()]);}
+  const mx=Math.max(1,...days.map(x=>x[1]));
+  const zeroBiz=days.filter(([k,c,w])=>c===0&&w>=1&&w<=5&&k<TODAY);
+  // 기관별 최근 7일 vs 이전 7일
+  const d7=new Date(built);d7.setDate(d7.getDate()-7);const d14=new Date(built);d14.setDate(d14.getDate()-14);
+  const s7=d7.toISOString().slice(0,10), s14=d14.toISOString().slice(0,10);
+  const bySrc={};for(const n of DATA){const sname=srcOf(n);const d=(n.notice_date||"").slice(0,10);const o=bySrc[sname]=bySrc[sname]||{a:0,b:0,t:0};o.t++;if(d>=s7)o.a++;else if(d>=s14)o.b++;}
+  // 첨부·공고문 처리 (관심 공고 기준)
+  const recent12=new Date(built);recent12.setDate(recent12.getDate()-12);const r12=recent12.toISOString().slice(0,10);
+  const tgt=DATA.filter(n=>n.matched&&!n.isPre&&(n.first_seen||n.notice_date||"")>=r12);
+  const wf=tgt.filter(n=>dFiles(n).length), wi=tgt.filter(n=>dInfo(n).summary||dInfo(n).schedule), wj=tgt.filter(n=>(dInfo(n).jury||{}).members&&dInfo(n).jury.members.length), wt=tgt.filter(n=>n.info_tried), wm=tgt.filter(n=>/명단 미인식/.test(n.info_diag||""));
+  const pct=(a,b)=>b?Math.round(a/b*100)+"%":"-";
+  let h=`<h3>수집 점검 <button class="x" onclick="closeCheck()" aria-label="닫기">×</button></h3>
+  <div class="sub">이 화면은 현재 불러온 데이터를 기준으로 계산합니다 · 지금 ${esc(now.toLocaleString("ko-KR",{hour12:false}).slice(0,-3))}</div>
+  <div class="kv">
+    <div><b class="${stale?"bad":"ok"}">${esc(fmtAgo(ago))}</b><span>마지막 수집 ${esc(BUILT.replace("T"," ").slice(0,16))}${stale?" · 평소보다 늦음":""}</span></div>
+    <div><b>${DATA.length.toLocaleString()}</b><span>전체 공고 (30일 + 마감 전)</span></div>
+    <div><b>${esc(dmin)}</b><span>가장 오래된 공고일</span></div>
+    <div><b>${esc(dmax)}</b><span>가장 최근 공고일</span></div>
+  </div>
+  <h4>공고일별 건수 — 최근 30일 ${zeroBiz.length?`<span class="bad">· 평일인데 0건: ${zeroBiz.map(x=>x[0].slice(5)).join(", ")}</span>`:`<span class="ok">· 평일 공백 없음</span>`}</h4>
+  <div class="bars">${days.map(([k,c,w])=>`<i class="${c===0?"z":""} ${w===0||w===6?"we":""}" style="height:${Math.max(2,c/mx*100)}%" data-t="${k.slice(5)} · ${c}건"></i>`).join("")}</div>
+  <div class="lbl"><span>${esc(days[0][0].slice(5))}</span><span>30일 기준일 ${esc(cutS)} 이전 공고는 마감 전인 것만 유지</span><span>${esc(days[29][0].slice(5))}</span></div>
+  <h4>수집처별 — 최근 7일 vs 그 전 7일 <span class="sub" style="display:inline">(최근 7일이 0이면 그 수집처가 멈춘 것)</span></h4>
+  <table><tr><th>수집처</th><th>최근 7일</th><th>이전 7일</th><th>전체</th><th>상태</th></tr>
+  ${Object.entries(bySrc).sort((a,b)=>b[1].t-a[1].t).map(([k,o])=>`<tr><td>${esc(SRC_NAME[k]||k)}</td><td>${o.a}</td><td>${o.b}</td><td>${o.t.toLocaleString()}</td><td class="${o.a===0&&o.b>0?"bad":o.a<o.b*0.3&&o.b>=5?"warn":"ok"}">${o.a===0&&o.b>0?"멈춤 의심":o.a<o.b*0.3&&o.b>=5?"급감":"정상"}</td></tr>`).join("")}</table>
+  <h4>공고문 읽기 — 최근 12일 관심 공고 ${tgt.length}건 기준</h4>
+  <div class="kv">
+    <div><b>${pct(wf.length,tgt.length)}</b><span>첨부 주소 확보 (${wf.length}건)</span></div>
+    <div><b>${pct(wt.length,wf.length)}</b><span>공고문 읽기 시도 (${wt.length}/${wf.length})</span></div>
+    <div><b>${pct(wi.length,wf.length)}</b><span>요약·일정 추출 (${wi.length}건)</span></div>
+    <div><b>${wj.length}건</b><span>심사위원 명단 확보${wm.length?` · <span class="warn">명단 미인식 ${wm.length}건</span>`:""}</span></div>
+  </div>
+  ${wm.length?`<div class="note">명단 미인식 공고(공고문에 "심사위원"은 있는데 표를 못 읽은 것): ${wm.slice(0,5).map(n=>`<a href="#" onclick="closeCheck();openDetail('${esc(n.key)}','jury');return false">${esc((n.title||"").slice(0,22))}…</a>`).join(" · ")}${wm.length>5?` 외 ${wm.length-5}건`:""}</div>`:""}
+  <div class="note">판정 기준 — 마지막 수집: 평일 09~18시는 2.5시간, 그 외 26시간 넘으면 빨강 · 평일 0건은 공휴일일 수 있음 · 수집처 "멈춤 의심"이 이틀 이상 이어지면 해당 사이트 접속 차단 가능성</div>
+  <div class="btns"><button class="pri2" onclick="checkNewer(true)">서버에 새 데이터 있는지 확인</button><button onclick="closeCheck()">닫기</button></div>`;
+  $("chkBox").innerHTML=h; $("chk").classList.add("open");
+}
+function closeCheck(){$("chk").classList.remove("open");}
+$("chk").addEventListener("click",e=>{if(e.target.id==="chk")closeCheck();});
+document.querySelector(".asof").addEventListener("click",openCheck);
+/* 화면을 켜 둔 채 두어도 새 수집이 올라오면 알림 → 새로고침 유도 (탭 복귀 때 + 15분마다) */
+let LAST_VER=null;
+async function checkNewer(manual){
+  try{const m=await (await fetch("meta.json?t="+Date.now(),{cache:"no-cache"})).json();
+    if(LAST_VER===null)LAST_VER=m.ver;
+    if(m.ver&&m.ver!==LAST_VER){$("newdataTxt").textContent=`새 수집 결과가 있습니다 (${(m.date||"").slice(5)} 갱신)`;$("newdata").classList.add("on");if(manual){closeCheck();}}
+    else if(manual){$("newdataTxt").textContent="지금 보고 있는 데이터가 최신입니다";$("newdata").classList.add("on");setTimeout(()=>$("newdata").classList.remove("on"),3500);}
+  }catch(e){if(manual){$("newdataTxt").textContent="서버 확인 실패 (네트워크)";$("newdata").classList.add("on");setTimeout(()=>$("newdata").classList.remove("on"),3500);}}
+}
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkNewer(false);});
+setInterval(()=>checkNewer(false),15*60*1000);
 if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
 }
