@@ -715,7 +715,8 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
     <span class="tools"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
   </div>
   <div class="nav" id="nav">
-    <button class="it on" data-view="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>홈<span class="n" id="n-new"></span></button>
+    <button class="it on" data-view="home"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 11 12 3l9 8"/><path d="M5 10v10h5v-6h4v6h5V10"/></svg>홈<span class="n" id="n-home"></span></button>
+    <button class="it" data-view="new"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M13 2 3 14h8l-1 8 10-12h-8Z"/></svg>신규 공고<span class="n" id="n-new"></span></button>
     <button class="it" data-view="pre"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="4" y="3.5" width="16" height="17" rx="2"/><path d="M8 9h8M8 13h5"/></svg>사전규격<span class="n" id="n-pre"></span></button>
     <button class="it" data-view="matched"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 3.5l2.6 5.4 5.9.8-4.3 4.1 1.1 5.9L12 16.9l-5.3 2.8 1.1-5.9-4.3-4.1 5.9-.8z"/></svg>관심 공고<span class="n" id="n-matched"></span></button>
     <button class="it" data-view="all"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 6h16M4 12h16M4 18h16"/></svg>전체<span class="n" id="n-all"></span></button>
@@ -796,15 +797,17 @@ let CONFIG_HEAD="";
 let NOW=new Date(BUILT);
 let TODAY=BUILT.slice(0,10);
 const LS_KW="bidmon.kw",LS_S="bidmon.filters2";
-const VIEWS={new:"홈",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
-const VTITLE={new:"홈 · 신규 공고 "+"(최근 10일)",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
+const VIEWS={home:"홈",new:"신규 공고",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
+const HOME_DAYS=3;   // 홈: 최근 N일 내 들어온 키워드 공고만 (전체 신규는 [신규 공고])
+const VTITLE={home:`홈 · 최근 ${HOME_DAYS}일 신규`,new:"신규 공고 (최근 10일)",pre:"사전규격",matched:"관심 공고",all:"전체 공고"};
 const NEW_DAYS=10;   // 신규 공고: 최근 N일 내 처음 수집된 공고
 const LS_STAR="bidmon.star";
 const $=id=>document.getElementById(id);
 const load=(k,d)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):d;}catch(e){return d;}};
 const save=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v));}catch(e){}};
 const EMPTY_F=()=>({status:"open",award:[],org:[],reg:[],use:[],amin:"",amax:"",dfrom:"",dto:"",nd:""});
-const S=Object.assign({view:"new",tag:"",q:"",src:"default",per:50,sort:"",ins:1,f:EMPTY_F()},load(LS_S,{}));
+const S=Object.assign({view:"home",tag:"",q:"",src:"default",per:50,sort:"",ins:1,f:EMPTY_F()},load(LS_S,{}));
+if(S.view==="new"&&!S.homeMig){S.view="home";S.homeMig=1;}   // 홈 메뉴 신설: 한 번만 홈으로
 S.f=Object.assign(EMPTY_F(),S.f||{});["tag","cat","kind","open","amt","due","reg"].forEach(k=>delete S[k]);   // 옛 필터 상태 정리
 const FDEF={
   status:[["open","접수 중"],["week","이번 주 마감"],["pre","사전규격 단계"],["cv","본공고 전환"],["closed","마감됨"],["all","마감 포함 전체"]],
@@ -841,7 +844,7 @@ function useOf(n){
   if(/공원|조경|녹지|광장|하천|수변/.test(t))return "조경·공원";
   return "기타";
 }
-if(!VIEWS[S.view])S.view="new";
+if(!VIEWS[S.view])S.view="home";
 /* 관심공고: 사전규격에서 체크한 공고. 수집 데이터에서 빠져도 계속 보이도록 내용을 함께 저장 */
 let STAR=load(LS_STAR,{});
 const SNAP=["key","notice_no","title","institution","demand_institution","notice_date","close_date","estimated_price","budget","notice_kind","url","tags","category","first_seen"];
@@ -851,7 +854,7 @@ function setStar(key,on,n){
   save(LS_STAR,STAR);
   if(DSTATE)saveDeptState(st=>{st.star=st.star||{};if(on)st.star[key]=snap;else delete st.star[key];},on?"관심 공고 추가":"관심 공고 해제");
 }
-let NEW_FROM="";
+let NEW_FROM="",HOME_FROM="";
 let PAGE=1;
 function normKW(k){return k&&typeof k==="object"?{include:Array.isArray(k.include)?k.include.filter(Boolean):[],exclude:Array.isArray(k.exclude)?k.exclude.filter(Boolean):[]}:null;}   // config.yaml 에 빈 목록(null)이 와도 안전
 let MYKW=normKW(load(LS_KW,null));
@@ -867,7 +870,7 @@ const shortInst=s=>String(s||"").replace(/\s*\S*(지역본부|지방본부|지�
 const preUrl=n=>n.url||(n.notice_no?`https://www.g2b.go.kr/link/PRVA004_02/single/?bfSpecRegNo=${encodeURIComponent(n.notice_no)}`:"https://www.g2b.go.kr/");
 const instOf=n=>{const i=n.institution||"";return (i.includes("조달청")&&n.demand_institution)?n.demand_institution:i;};
 
-function judge(n){const K=curKW();const t=norm(n.title);const inc=K.include.filter(k=>k&&t.includes(norm(k)));const exc=K.exclude.some(k=>k&&t.includes(norm(k)));n.matched=inc.length>0&&!exc;n.mk=[...new Set(inc.map(norm))].join(", ");n.dd=dday(n.close_date);n.isToday=n.first_seen===TODAY;n.isNew=!!n.first_seen&&n.first_seen>=NEW_FROM;n.isPre=n.notice_kind==="사전규격";n.starred=!!STAR[n.key];n.isRe=/재공고/.test(n.notice_kind||"")||/재공고|재\s*입찰/.test(n.title||"");n.region=regionOf(n);if(n.inf===undefined){n.inf=parseJ(n.info,null);n.fl=parseJ(n.files,[])||[];}n.aw=awardOf(n);n.org=orgOf(n);n.use=useOf(n);}
+function judge(n){const K=curKW();const t=norm(n.title);const inc=K.include.filter(k=>k&&t.includes(norm(k)));const exc=K.exclude.some(k=>k&&t.includes(norm(k)));n.matched=inc.length>0&&!exc;n.mk=[...new Set(inc.map(norm))].join(", ");n.dd=dday(n.close_date);n.isToday=n.first_seen===TODAY;n.isNew=!!n.first_seen&&n.first_seen>=NEW_FROM;n.isHome=!!n.first_seen&&n.first_seen>=HOME_FROM;n.isPre=n.notice_kind==="사전규격";n.starred=!!STAR[n.key];n.isRe=/재공고/.test(n.notice_kind||"")||/재공고|재\s*입찰/.test(n.title||"");n.region=regionOf(n);if(n.inf===undefined){n.inf=parseJ(n.info,null);n.fl=parseJ(n.files,[])||[];}n.aw=awardOf(n);n.org=orgOf(n);n.use=useOf(n);}
 const parseJ=(v,d)=>{if(!v)return d;if(typeof v==="object")return v;try{return JSON.parse(v);}catch(e){return d;}};
 const REGIONS=["서울","부산","대구","인천","광주","대전","울산","세종","경기","강원","충북","충남","전북","전남","경북","경남","제주"];
 const REG_ALIAS=[["서울특별시","서울"],["부산광역시","부산"],["대구광역시","대구"],["인천광역시","인천"],["광주광역시","광주"],["대전광역시","대전"],["울산광역시","울산"],["세종특별자치시","세종"],["경기도","경기"],["강원특별자치도","강원"],["강원도","강원"],["충청북도","충북"],["충청남도","충남"],["전북특별자치도","전북"],["전라북도","전북"],["전라남도","전남"],["경상북도","경북"],["경상남도","경남"],["제주특별자치도","제주"],["제주도","제주"]];
@@ -885,6 +888,7 @@ const PRE_ALIVE_DAYS=30;
 const preAlive=n=>n.isPre&&n.dd!==null&&n.dd<0&&!n.bid&&!!n.notice_date&&(NOW-new Date(n.notice_date.replace(" ","T")))/864e5<=PRE_ALIVE_DAYS;
 function judgeAll(){
   NEW_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(NEW_DAYS-1)*864e5).toISOString().slice(0,10);
+  HOME_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(HOME_DAYS-1)*864e5).toISOString().slice(0,10);
   DATA.forEach(judge);
   // 체크해 둔 사전규격이 수집 목록에서 빠졌으면 저장본으로 되살림
   const have=new Set(DATA.map(n=>n.key));
@@ -934,13 +938,14 @@ function inView(n,v){
   if(v==="matched")return n.starred&&!(!n.isPre&&n.pre&&n.pre.starred);   // 체크한 공고 전부 (사전규격·입찰공고 둘 다 체크됐으면 사전규격 쪽으로 한 번만)
   if(!n.matched)return false;                        // 신규·사전규격은 키워드 기준
   if(v==="new")return n.isNew&&!(n.isPre&&n.bid);          // 입찰공고가 올라온 사전규격은 신규·사전규격 목록에서 제외
+  if(v==="home")return n.isHome&&!(n.isPre&&n.bid);
   if(v==="pre")return n.isPre&&!n.bid;
   return true;
 }
 const hasTag=(n,t)=>!t||(n.tags||"").split(",").includes(t);
 
 function counts(){
-  for(const v of Object.keys(VIEWS))$("n-"+v).textContent=DATA.filter(n=>base(n,v)&&inView(n,v)&&hasTag(n,S.tag)).length.toLocaleString();   // 메뉴별 건수는 각 메뉴 기준으로 (관심 공고는 마감된 체크 공고 포함)
+  for(const v of Object.keys(VIEWS)){const c=DATA.filter(n=>base(n,v)&&inView(n,v)&&hasTag(n,S.tag)).length;const el=$("n-"+v);if(el)el.textContent=v==="home"?(c?c.toLocaleString():""):c.toLocaleString();}   // 메뉴별 건수는 각 메뉴 기준으로 (관심 공고는 마감된 체크 공고 포함)
   $("total").textContent=DATA.length.toLocaleString();
 }
 
@@ -1061,7 +1066,7 @@ function render(){
   const el=$("list");
   renderInsights();
   if(!rows.length){
-    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.src==="dept"&&!DEPTKW&&S.view!=="all")?"부서 키워드가 아직 없습니다. [키워드 편집]에서 입력하거나, 왼쪽 [회사 기본값]을 선택하세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":"조건에 맞는 공고가 없습니다."))+'</div>';
+    el.innerHTML='<div class="empty">'+((S.src==="mine"&&!MYKW&&S.view!=="all")?"내 키워드가 비어 있습니다. [키워드] 버튼에서 키워드를 넣어 주세요.":(S.src==="dept"&&!DEPTKW&&S.view!=="all")?"부서 키워드가 아직 없습니다. [키워드 편집]에서 입력하거나, 왼쪽 [회사 기본값]을 선택하세요.":(S.view==="matched"?"[사전규격]에서 관심 있는 공고를 체크하면 여기에 모입니다.":S.view==="home"?`최근 ${HOME_DAYS}일 안에 들어온 키워드 공고가 없습니다. 왼쪽 [신규 공고]에서 최근 ${NEW_DAYS}일치를 볼 수 있습니다.`:"조건에 맞는 공고가 없습니다."))+'</div>';
     return;
   }
   if(S.view==="matched"){renderMatched(rows,el);el.scrollTop=0;return;}
@@ -1105,7 +1110,7 @@ function theadHTML(){
 /* ── 인사이트 카드: 마감 임박 TOP / 추정가격 TOP / 이번 주 현황 ── */
 function renderInsights(){
   const el=$("ins");
-  if(S.view!=="new"){el.hidden=true;el.classList.remove("mini");return;}          // 카드는 홈에서만
+  if(S.view!=="home"){el.hidden=true;el.classList.remove("mini");return;}          // 카드는 홈에서만
   if(!S.ins){el.classList.add("mini");el.innerHTML='<span class="more" id="insTg">▸ 마감 임박 · 추정가격 TOP · 현황 카드 펼치기</span>';el.hidden=false;return;}
   el.classList.remove("mini");
   const live=DATA.filter(n=>!n.orphan);
@@ -1738,7 +1743,7 @@ function exportRows(){
   const H=["구분","공고명","업무구분","수요기관","공고기관","분류","기관태그","배정예산(원)","추정가격(원)","공고번호","공고일시","마감일시","D-day","낙찰방법","공고종류","일치 키워드","처음 수집","링크"];
   const out=rows.map(n=>[n.isPre?"사전규격":"입찰공고",n.title,n.service_div||"",instOf(n),n.institution||"",n.category||"",n.tags||"",won(n.budget),won(n.estimated_price),
     n.notice_no,n.notice_date||"",n.close_date||"",n.dd==null?"":n.dd,n.award_method||"",n.notice_kind||"",n.mk||"",n.first_seen||"",n.isPre?preUrl(n):bidUrl(n)]);
-  return {H,out,name:S.view==="new"?"신규 공고":VIEWS[S.view]};
+  return {H,out,name:VIEWS[S.view]};
 }
 async function exportXlsx(){
   const {H,out,name}=exportRows();
