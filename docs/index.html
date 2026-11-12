@@ -682,7 +682,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 }
 
 /* ── 수집 점검 패널 ── */
-.asof{cursor:pointer}.asof:hover{color:var(--ink2)}
+.asof.adm{cursor:pointer}.asof.adm:hover{color:var(--ink2)}
 #chk{position:fixed;inset:0;z-index:70;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.32);padding:16px}
 #chk.open{display:flex}
 #chk .box{background:var(--panel,var(--bg));border:1px solid var(--line);border-radius:14px;width:min(640px,100%);max-height:90vh;overflow:auto;padding:18px 20px;box-shadow:0 20px 60px rgba(0,0,0,.25)}
@@ -750,6 +750,9 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
   #chk .btns{flex-wrap:wrap}#chk .btns button{flex:1;min-width:120px}
   .fld .kbd{display:none}
 }
+
+.depterr{margin:4px 10px 6px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--red) 10%,transparent);color:var(--ink2);font-size:11.5px;line-height:1.5}
+.depterr b{color:var(--red)}
 </style>
 </head>
 <body>
@@ -914,7 +917,7 @@ let NEW_FROM="",HOME_FROM="";
 let PAGE=1;
 function normKW(k){return k&&typeof k==="object"?{include:Array.isArray(k.include)?k.include.filter(Boolean):[],exclude:Array.isArray(k.exclude)?k.exclude.filter(Boolean):[]}:null;}   // config.yaml 에 빈 목록(null)이 와도 안전
 let MYKW=normKW(load(LS_KW,null));
-let DSTATE=null, DEPTKW=null;   // 부서 공유 상태 (잠금 모드에서 로드)
+let DSTATE=null, DEPTKW=null, DSTATE_ERR="";   // 부서 공유 상태 (잠금 모드에서 로드) · 실패 이유
 const EMPTY_KW={include:[],exclude:[]};
 const curKW=()=>S.src==="mine"?(MYKW||EMPTY_KW):S.src==="dept"?(DEPTKW||EMPTY_KW):DEFAULT_KW;
 const norm=s=>String(s||"").replace(/\s/g,"");
@@ -1193,7 +1196,8 @@ function homeAlerts(){
   grp("pre:n","gry","💬","사전규격 의견등록 마감 임박 {n}건",pe.filter(n=>!n.starred),{go:"pre",s:"체크하지 않은 사전규격 · D-2 이내"});
   // 6 심사위원
   grp("jury","gry","👥","심사위원 명단 확보 {n}건",m.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&(n.inf&&n.inf.jury&&n.inf.jury.members&&n.inf.jury.members.length)&&(n.info_tried||"")>=d3),{tab:"jury",s:"최근 3일에 공고문에서 추출"});
-  // 7 시스템
+  // 7 시스템 (관리자만)
+  if(!ADMIN)return A;
   const ago=(new Date()-new Date(BUILT))/36e5, d=new Date(), biz=d.getDay()>=1&&d.getDay()<=5&&d.getHours()>=9&&d.getHours()<=18;
   if(biz?ago>2.5:ago>26)A.push({k:"sys:stale:"+BUILT,lvl:"red",ico:"⚠️",t:`수집이 ${fmtAgo(new Date()-new Date(BUILT))} 멈춰 있음`,s:"갱신 표시를 눌러 점검 창에서 확인",chk:1});
   const d7=new Date(new Date(TODAY+"T00:00:00").getTime()-7*864e5).toISOString().slice(0,10), d14=new Date(new Date(TODAY+"T00:00:00").getTime()-14*864e5).toISOString().slice(0,10);
@@ -1273,7 +1277,7 @@ function renderInsights(){
       <div data-go="new"><b class="${c.cv?"grn":""}">${c.cv}</b><span>사전규격→본공고</span></div>
       <div data-go="new"><b>${c.re}</b><span>재공고</span></div>
     </div>
-    <p class="foot">${late?`관심 사전규격 <b>${late}건</b>은 의견마감 2주가 지나도 본공고가 없음`:`키워드 일치 ${m.length.toLocaleString()}건 · 전체 ${live.length.toLocaleString()}건 수집`}${ACCESS?` · <b>${esc(ACCESS.dept)}</b>`:""} · 마지막 수집 <span class="lnk2" data-chk="1">${esc(BUILT.replace("T"," ").slice(5,16))}</span></p></div>`;
+    <p class="foot">${late?`관심 사전규격 <b>${late}건</b>은 의견마감 2주가 지나도 본공고가 없음`:`키워드 일치 ${m.length.toLocaleString()}건 · 전체 ${live.length.toLocaleString()}건 수집`}${ACCESS?` · <b>${esc(ACCESS.dept)}</b>`:""} · 마지막 수집 ${ADMIN?`<span class="lnk2" data-chk="1">${esc(BUILT.replace("T"," ").slice(5,16))}</span>`:esc(BUILT.replace("T"," ").slice(5,16))}</p></div>`;
   el.hidden=false;
 }
 
@@ -1390,10 +1394,13 @@ function syncUI(){
 }
 function fillKw(){const K=curKW();$("kwInc").value=K.include.join("\n");$("kwExc").value=K.exclude.join("\n");}
 function syncSrc(){
+  if(typeof syncAdminChk==="function")syncAdminChk();
   document.querySelectorAll("[data-src]").forEach(b=>b.classList.toggle("on",b.dataset.src===S.src));
   $("s-default").textContent=S.src==="default"?"사용 중":"";
   $("s-mine").textContent=S.src==="mine"?"사용 중":(MYKW?"저장됨":"미설정");
   document.querySelectorAll(".dept-only").forEach(b=>b.hidden=!DSTATE);
+  let dn2=$("deptErr");if(!dn2){dn2=document.createElement("div");dn2.id="deptErr";dn2.className="depterr";const anchor=document.querySelector('.it[data-src="mine"]');if(anchor)anchor.insertAdjacentElement("afterend",dn2);}
+  if(dn2){dn2.hidden=!(ACCESS&&!DSTATE&&DSTATE_ERR);dn2.innerHTML=ACCESS&&!DSTATE&&DSTATE_ERR?`<b>부서 키워드·관심 공고 공유 안 됨</b><br>${esc(DSTATE_ERR)}<br><span class="lnk2" onclick="location.reload()">다시 시도</span>`:"";}
   // 부서 공유 모드에서는 개인 계정이 없으므로 '내 키워드'(기기별)는 숨김 → 회사 기본값 / 부서 키워드 두 가지만
   document.querySelectorAll('[data-src="mine"]').forEach(b=>b.hidden=!!DSTATE);
   if(DSTATE&&S.src==="mine"){S.src=DEPTKW?"dept":"default";save(LS_S,S);}
@@ -2212,7 +2219,10 @@ async function fetchState(dept){
     const err=new Error("STATE_UNREADABLE");err.sha=j.sha;throw err;}
 }
 async function loadDeptState(){
-  if(!ACCESS||!ACCESS.tok||!GH_REPO){DSTATE=null;return;}
+  DSTATE_ERR="";
+  if(!ACCESS){DSTATE=null;return;}
+  if(!GH_REPO){DSTATE=null;DSTATE_ERR="저장소 주소(github_repo)가 설정에 없음";sysNote("부서 공유: "+DSTATE_ERR);return;}
+  if(!cleanTok(ACCESS.tok||"")){DSTATE=null;DSTATE_ERR="부서 저장용 GitHub 토큰이 비어 있음 — 수집 설정의 STATE_TOKEN(또는 .env GITHUB_TOKEN) 확인";sysNote("부서 공유: "+DSTATE_ERR);return;}
   try{
     let state,unreadable=false;
     try{({state}=await fetchState(ACCESS.dept));}
@@ -2228,7 +2238,7 @@ async function loadDeptState(){
     if(unreadable&&!restore)restore="부서 설정";   // 못 읽는 옛 파일은 현재 키로 다시 써서 다음 접속부터 정상화
     if(restore){const kw=state.kw,st=state.star;setTimeout(()=>saveDeptState(x=>{if(kw)x.kw=kw;x.star=Object.assign({},x.star||{},st||{});},restore+" 복구"),800);}
     if(!load(LS_S,null)||!load(LS_S,{}).srcSet){S.src=DEPTKW?"dept":"default";}
-  }catch(e){DSTATE=null;sysNote("부서 공유 설정을 불러오지 못함: "+(e.message||e));}
+  }catch(e){DSTATE=null;const m=String(e.message||e);DSTATE_ERR=/state 401|state 403/.test(m)?"GitHub 토큰 권한 없음("+m+") — 이 저장소 Contents 읽기/쓰기 권한의 토큰이 필요":/state 404/.test(m)?"저장소 경로 없음("+m+")":/Failed to fetch|NetworkError/.test(m)?"GitHub API 접속 실패(네트워크·차단)":m;sysNote("부서 공유 설정을 불러오지 못함: "+DSTATE_ERR);}
 }
 let _saving=null;
 async function saveDeptState(mutate,label){
@@ -2317,6 +2327,7 @@ const SRC_NAME={g2b:"나라장터",g2b_pre:"나라장터 사전규격",g2b_presp
 function srcOf(n){const k=(n.key||"").split("|")[0].split(":")[0];return n.isPre&&k==="g2b"?"g2b_pre":k;}
 function fmtAgo(ms){const h=ms/36e5;return h<1?Math.round(h*60)+"분 전":h<48?Math.round(h*10)/10+"시간 전":Math.round(h/24)+"일 전";}
 function openCheck(){
+  if(!ADMIN)return;                      // 수집 점검은 관리자만
   const now=new Date(), built=new Date(BUILT), ago=now-built, agoH=ago/36e5;
   const day=now.getDay(), hr=now.getHours(), biz=day>=1&&day<=5&&hr>=9&&hr<=18;
   const stale=biz?agoH>2.5:agoH>26;
@@ -2346,6 +2357,7 @@ function openCheck(){
     <div><b>${DATA.length.toLocaleString()}</b><span>전체 공고 (30일 + 마감 전)</span></div>
     <div><b>${esc(dmin)}</b><span>가장 오래된 공고일</span></div>
     <div><b>${esc(dmax)}</b><span>가장 최근 공고일</span></div>
+    ${ACCESS?`<div><b class="${DSTATE?"ok":"bad"}">${DSTATE?"연결됨":"실패"}</b><span>부서 공유(키워드·관심 공고)${DSTATE?"":" — "+esc(DSTATE_ERR||"원인 미상")}</span></div>`:""}
   </div>
   <h4>공고일별 건수 — 최근 30일 ${zeroBiz.length?`<span class="bad">· 평일인데 0건 ${zeroBiz.length}일: ${zeroBiz.slice(0,6).map(x=>x[0].slice(5)).join(", ")}${zeroBiz.length>6?` 외 ${zeroBiz.length-6}일`:""}</span>`:`<span class="ok">· 평일 공백 없음</span>`}</h4>
   <div class="bars">${days.map(([k,c,w])=>`<i class="${c===0?"z":""} ${w===0||w===6?"we":""}" style="height:${Math.max(2,c/mx*100)}%" data-t="${k.slice(5)} · ${c}건"></i>`).join("")}</div>
@@ -2368,6 +2380,7 @@ function openCheck(){
 function closeCheck(){$("chk").classList.remove("open");}
 $("chk").addEventListener("click",e=>{if(e.target.id==="chk")closeCheck();});
 document.querySelector(".asof").addEventListener("click",openCheck);
+function syncAdminChk(){document.querySelector(".asof").classList.toggle("adm",!!ADMIN);}
 /* 화면을 켜 둔 채 두어도 새 수집이 올라오면 알림 → 새로고침 유도 (탭 복귀 때 + 15분마다) */
 let LAST_VER=null;
 async function checkNewer(manual){
