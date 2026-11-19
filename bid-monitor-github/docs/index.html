@@ -753,6 +753,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 
 .depterr{margin:4px 10px 6px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--red) 10%,transparent);color:var(--ink2);font-size:11.5px;line-height:1.5}
 .depterr b{color:var(--red)}
+
 </style>
 </head>
 <body>
@@ -949,6 +950,10 @@ function judgeAll(){
   NEW_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(NEW_DAYS-1)*864e5).toISOString().slice(0,10);
   HOME_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(HOME_DAYS-1)*864e5).toISOString().slice(0,10);
   DATA.forEach(judge);
+  // 같은 공고번호의 차수(변경·정정공고 00→01→02)는 최신 차수만 보이게. 옛 차수는 superseded 로 숨기고, 관심 체크는 최신으로 이어 붙임
+  {const latest={};for(const n of DATA){if(n.isPre||!n.notice_no)continue;const g=(n.key||"").split("|")[0]+"|"+n.notice_no;const o=String(n.ord||"00");if(!latest[g]||o>String(latest[g].ord||"00"))latest[g]=n;}
+   for(const n of DATA){if(n.isPre||!n.notice_no){n.superseded=false;n.older=0;continue;}const g=(n.key||"").split("|")[0]+"|"+n.notice_no;const L=latest[g];n.superseded=L!==n;n.older=0;
+     if(L===n){n.older=DATA.filter(x=>x!==n&&!x.isPre&&(x.key||"").split("|")[0]+"|"+x.notice_no===g).length;if(!n.starred&&n.older&&DATA.some(x=>x!==n&&x.notice_no===n.notice_no&&x.starred)){n.starred=true;STAR[n.key]=STAR[n.key]||{};}}}}
   // 체크해 둔 사전규격이 수집 목록에서 빠졌으면 저장본으로 되살림
   const have=new Set(DATA.map(n=>n.key));
   for(const [k,o] of Object.entries(STAR)){if(!have.has(k)){const n=Object.assign({},o);judge(n);n.starred=true;n.orphan=true;DATA.push(n);have.add(k);}}
@@ -969,6 +974,7 @@ function judgeAll(){
 }
 
 function base(n,v=S.view,F=S.f,skip=""){
+  if(n.superseded)return false;                                   // 변경공고로 대체된 옛 차수
   if(S.q){const q=norm(S.q).toLowerCase();if(!norm(n.title+" "+(n.institution||"")+" "+(n.demand_institution||"")+" "+(n.region||"")).toLowerCase().includes(q))return false;}
   return passF(n,v,F,skip);
 }
@@ -1501,6 +1507,7 @@ function openDetail(key,tab){
   const bds=[`<span class="bg st ${st[1]}">${st[0]}</span>`];
   if(bid&&pre)bds.push('<span class="bg" style="color:var(--acc)">사전규격→본공고</span>');
   if(main.isRe)bds.push('<span class="bg" style="color:var(--orange)">재공고</span>');
+  if(main.ord&&main.ord!=="00"&&main.ord!=="000")bds.push(`<span class="bg" style="color:var(--orange)">변경 ${esc(String(main.ord).replace(/^0+/,""))}차${main.older?` · 이전 ${main.older}건 숨김`:""}</span>`);
   if(main.award_method)bds.push(`<span class="bg">${esc(main.award_method.split("-")[0].trim())}</span>`);
   if(main.service_div)bds.push(`<span class="bg">${esc(main.service_div)}</span>`);
   if(main.region)bds.push(`<span class="bg">${esc(main.region)}</span>`);
