@@ -754,6 +754,10 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .depterr{margin:4px 10px 6px;padding:8px 10px;border-radius:8px;background:color-mix(in srgb,var(--red) 10%,transparent);color:var(--ink2);font-size:11.5px;line-height:1.5}
 .depterr b{color:var(--red)}
 
+
+.bootmsg{margin-top:14px;font-size:12.5px;color:var(--ink3);text-align:center;line-height:1.7;min-height:1.5em}
+.bootmsg a{color:var(--acc);margin:0 6px}
+#lock.boot .lk{opacity:1;animation:none}
 </style>
 </head>
 <body>
@@ -821,7 +825,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 <div id="dim"></div>
 <div id="chk" role="dialog" aria-modal="true"><div class="box" id="chkBox"></div></div>
 <div id="newdata"><span id="newdataTxt">새 수집 결과가 있습니다</span><button onclick="location.reload()">새로고침</button></div>
-<div id="lock" class="open boot" aria-hidden="true"><div class="lk"><span class="logo"></span></div></div>
+<div id="lock" class="open boot" aria-hidden="true"><div class="lk"><span class="logo"></span><div id="bootMsg" class="bootmsg"></div></div></div>
 <section id="dv" aria-hidden="true"><div class="hd"><h2>부서별 관심 현황</h2><span class="cnt" id="dvCnt"></span><span class="r"><button class="x" id="dvClose" title="닫기">×</button></span></div><div class="bd" id="dvBody"></div></section>
 <section id="ac" aria-hidden="true">
   <div class="hd"><h2>관리자</h2><span class="cnt" id="acWho"></span><span class="r"><button class="x" id="acClose" title="닫기">×</button></span></div>
@@ -950,10 +954,11 @@ function judgeAll(){
   NEW_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(NEW_DAYS-1)*864e5).toISOString().slice(0,10);
   HOME_FROM=new Date(new Date(TODAY+"T00:00:00").getTime()-(HOME_DAYS-1)*864e5).toISOString().slice(0,10);
   DATA.forEach(judge);
-  // 같은 공고번호의 차수(변경·정정공고 00→01→02)는 최신 차수만 보이게. 옛 차수는 superseded 로 숨기고, 관심 체크는 최신으로 이어 붙임
-  {const latest={};for(const n of DATA){if(n.isPre||!n.notice_no)continue;const g=(n.key||"").split("|")[0]+"|"+n.notice_no;const o=String(n.ord||"00");if(!latest[g]||o>String(latest[g].ord||"00"))latest[g]=n;}
-   for(const n of DATA){if(n.isPre||!n.notice_no){n.superseded=false;n.older=0;continue;}const g=(n.key||"").split("|")[0]+"|"+n.notice_no;const L=latest[g];n.superseded=L!==n;n.older=0;
-     if(L===n){n.older=DATA.filter(x=>x!==n&&!x.isPre&&(x.key||"").split("|")[0]+"|"+x.notice_no===g).length;if(!n.starred&&n.older&&DATA.some(x=>x!==n&&x.notice_no===n.notice_no&&x.starred)){n.starred=true;STAR[n.key]=STAR[n.key]||{};}}}}
+  // 같은 공고번호의 차수(변경·정정공고 00→01→02)는 최신 차수만 보이게. 옛 차수는 superseded 로 숨기고, 관심 체크는 최신으로 이어 붙임 (O(n))
+  {const grp={};for(const n of DATA){n.superseded=false;n.older=0;if(n.isPre||!n.notice_no)continue;const g=(n.key||"").split("|")[0]+"|"+n.notice_no;(grp[g]=grp[g]||[]).push(n);}
+   for(const g in grp){const arr=grp[g];if(arr.length<2)continue;arr.sort((a,b)=>String(b.ord||"00").localeCompare(String(a.ord||"00")));const L=arr[0];L.older=arr.length-1;
+     let st=false;for(let i=1;i<arr.length;i++){arr[i].superseded=true;if(arr[i].starred)st=true;}
+     if(st&&!L.starred){L.starred=true;STAR[L.key]=STAR[L.key]||{};}}}
   // 체크해 둔 사전규격이 수집 목록에서 빠졌으면 저장본으로 되살림
   const have=new Set(DATA.map(n=>n.key));
   for(const [k,o] of Object.entries(STAR)){if(!have.has(k)){const n=Object.assign({},o);judge(n);n.starred=true;n.orphan=true;DATA.push(n);have.add(k);}}
@@ -2215,7 +2220,7 @@ const GH_H=()=>({Authorization:"Bearer "+cleanTok((ACCESS&&ACCESS.tok)||TOKEN||"
 const stateUrl=d=>`https://api.github.com/repos/${GH_REPO}/contents/docs/state/${encodeURIComponent(d)}.json`;
 const b64utf=str=>b64e(new TextEncoder().encode(str));
 async function fetchState(dept){
-  const r=await fetch(stateUrl(dept)+"?ref=main&t="+Date.now(),{headers:GH_H(),cache:"no-store"});
+  const r=await fetch(stateUrl(dept)+"?ref=main&t="+Date.now(),{headers:GH_H(),cache:"no-store",signal:(AbortSignal.timeout?AbortSignal.timeout(20000):undefined)});
   if(r.status===404)return {sha:undefined,state:{kw:null,star:{},updated:""}};
   if(!r.ok)throw new Error("state "+r.status);
   const j=await r.json();
@@ -2281,8 +2286,20 @@ function toast(msg,ms=2500){
   return {ok:m=>{el.textContent=m;el.className="show ok";setTimeout(hide,2200);},err:m=>{el.textContent=m;el.className="show err";setTimeout(hide,5000);}};
 }
 
+
+/* ── 부팅 진행 표시: 로고 화면에서 멈춘 것처럼 보이지 않게 단계를 적고, 15초 넘으면 다시 시도·나가기 제공 ── */
+let BOOT_T0=Date.now(), BOOT_WD=null;
+function bootMsg(t){const el=$("bootMsg");if(el&&$("lock").classList.contains("boot"))el.textContent=t;}
+function bootWatch(){
+  clearTimeout(BOOT_WD);
+  BOOT_WD=setTimeout(()=>{
+    const el=$("bootMsg");if(!el||!$("lock").classList.contains("boot"))return;
+    el.innerHTML=`${esc(el.textContent||"불러오는 중")} — 평소보다 오래 걸립니다<br><a href="#" onclick="location.reload();return false">다시 시도</a>·<a href="#" onclick="lockOut();return false">나가기(다시 로그인)</a>`;
+  },15000);
+}
 async function loadData(){
   $("list").innerHTML='<div class="empty">공고를 불러오는 중…</div>';
+  bootMsg("접속 확인 중…");bootWatch();
   try{
     let m={};
     try{m=await (await fetch("meta.json?t="+Date.now(),{cache:"no-cache"})).json();}catch(e){}   // 아직 meta.json 이 없어도 데이터는 보여줌
@@ -2292,15 +2309,19 @@ async function loadData(){
     if(m.locked&&m.access){
       if(!crypto.subtle){$("list").innerHTML='<div class="empty">이 브라우저는 암호화 해제를 지원하지 않습니다. https 주소로 열어 주세요.</div>';return;}
       ACCESS=await unlockDept(m);
+      bootMsg(`${ACCESS.dept} · 공고 데이터 내려받는 중…`);bootWatch();
       enterDeptNS(ACCESS.dept); DSTATE=null; DEPTKW=null;                         // 이전에 로그인했던 부서의 흔적을 지움
       const r=await fetch("data.json?v="+(m.ver||Date.now()),{cache:"no-cache"});
       if(!r.ok)throw new Error(r.status);
+      bootMsg(`${ACCESS.dept} · 데이터 여는 중…`);
       payload=await decryptBlob(await r.json(),ACCESS.dkey);
       Object.assign(m,{kw:payload.kw,config_head:payload.config_head,admin_hash:payload.admin_hash,github_repo:payload.github_repo,github_config_path:payload.github_config_path,admin_token_enc:payload.admin_token_enc});
       $("who").innerHTML=`<span>${esc(ACCESS.dept)}</span> 로 접속 · <a href="#" id="lockOut">나가기</a>`;$("lockOut").onclick=e=>{e.preventDefault();lockOut();};
       if(m.admin_dept&&ACCESS.dept===m.admin_dept){ADMIN=true;if(payload.admin_token_enc&&PW){try{TOKEN=await unlock(payload.admin_token_enc,PW);}catch(e){}}}
       GH_REPO=payload.github_repo||"";
+      bootMsg(`${ACCESS.dept} · 부서 설정 불러오는 중…`);
       await loadDeptState();
+      clearTimeout(BOOT_WD);
       syncSrc();                                             // 부서 메뉴/내 키워드 표시를 먼저 맞춘 뒤 커버를 내림
       $("lock").classList.remove("open","boot");
     }
