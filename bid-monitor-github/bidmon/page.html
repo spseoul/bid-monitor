@@ -928,6 +928,7 @@ function enterDeptNS(dept){
 const EMPTY_F=()=>({status:"open",award:[],org:[],reg:[],use:[],amin:"",amax:"",dfrom:"",dto:"",nd:""});
 const S=Object.assign({view:"home",tag:"",q:"",src:"default",per:50,sort:"",ins:1,f:EMPTY_F()},load(LS_S,{}));
 if(S.view==="new"&&!S.homeMig){S.view="home";S.homeMig=1;}   // 홈 메뉴 신설: 한 번만 홈으로
+S.q="";
 S.f=Object.assign(EMPTY_F(),S.f||{});["tag","cat","kind","open","amt","due","reg"].forEach(k=>delete S[k]);   // 옛 필터 상태 정리
 const FDEF={
   status:[["open","접수 중"],["week","이번 주 마감"],["pre","사전규격 단계"],["cv","본공고 전환"],["closed","마감됨"],["all","마감 포함 전체"]],
@@ -1483,7 +1484,7 @@ function syncSrc(){
     $("btnReset2").hidden=S.src==="default";
   }
 }
-function update(){PAGE=1;save(LS_S,S);render();syncUI();}
+function update(){PAGE=1;save(LS_S,Object.assign({},S,{q:""}));render();syncUI();}   // 검색어는 저장하지 않음 — 다시 열면 빈 상태
 
 /* ── 상세 패널 ── */
 const fmtWon=v=>v==null||v===""?"—":Number(v).toLocaleString()+" 원";
@@ -2124,7 +2125,7 @@ document.addEventListener("click",e=>{
   const b=e.target.closest("button");
   if(b&&b.dataset.page!==undefined){PAGE=+b.dataset.page;render();return;}
   if(b&&b.dataset.src!==undefined){S.src=b.dataset.src;S.srcSet=1;save(LS_S,S);fillKw();judgeAll();update();return;}
-  if(b&&b.dataset.view!==undefined){S.view=b.dataset.view;update();return;}
+  if(b&&b.dataset.view!==undefined){S.view=b.dataset.view;S.q="";$("q").value="";update();return;}
 
   if(b&&b.dataset.kw!==undefined){togglePanel();return;}
   if(b&&b.dataset.admin!==undefined){openAdmin();return;}
@@ -2142,6 +2143,7 @@ document.addEventListener("change",e=>{
 });
 $("q").addEventListener("keydown",e=>{if(e.key==="Enter"){S.q=$("q").value;update();}});
 $("q").addEventListener("search",()=>{if(!$("q").value){S.q="";update();}});
+$("q").addEventListener("keydown",e=>{if(e.key==="Escape"){$("q").value="";S.q="";update();$("q").blur();}});
 document.addEventListener("keydown",e=>{if(e.key==="/"&&!["INPUT","TEXTAREA","SELECT"].includes(document.activeElement.tagName)){e.preventDefault();$("q").focus();}});
 $("sort").addEventListener("change",()=>{S.sort=$("sort").value;update();});
 const togglePanel=()=>{$("panel").classList.toggle("open");};
@@ -2632,7 +2634,7 @@ async function checkNewer(manual){
     else if(manual){$("newdataTxt").textContent="지금 보고 있는 데이터가 최신입니다";$("newdata").classList.add("on");setTimeout(()=>$("newdata").classList.remove("on"),3500);}
   }catch(e){if(manual){$("newdataTxt").textContent="서버 확인 실패 (네트워크)";$("newdata").classList.add("on");setTimeout(()=>$("newdata").classList.remove("on"),3500);}}
 }
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")checkNewer(false);});
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible"){checkNewer(false);if(S.q){S.q="";$("q").value="";update();}}});
 setInterval(()=>checkNewer(false),15*60*1000);
 if("serviceWorker" in navigator&&location.protocol.startsWith("http")){
   navigator.serviceWorker.register("sw.js").catch(()=>{});
