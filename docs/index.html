@@ -1062,10 +1062,11 @@ function passF(n,v,F,skip){
 }
 function inView(n,v){
   if(v==="all")return true;
+  const star=n.starred||(n.pre&&n.pre.starred)||(n.bid&&n.bid.starred);
   if(v==="matched")return n.starred&&!(!n.isPre&&n.pre&&n.pre.starred);   // 체크한 공고 전부 (사전규격·입찰공고 둘 다 체크됐으면 사전규격 쪽으로 한 번만)
-  if(!n.matched)return false;                        // 신규·사전규격은 키워드 기준
-  if(v==="new")return n.isNew&&!n.isPre;                   // 신규 공고 = 본공고만 (사전규격에서 본공고로 넘어온 것 포함). 사전규격은 [사전규격] 메뉴
   if(v==="home")return n.starred&&!(!n.isPre&&n.pre&&n.pre.starred);   // 홈 아래 목록 = 관심 공고 (카드가 핵심)
+  if(!n.matched&&!star)return false;                 // 신규·사전규격은 키워드 기준 — 단, 관심으로 체크한 공고는 키워드와 무관하게 보임
+  if(v==="new")return n.isNew&&!n.isPre;                   // 신규 공고 = 본공고만 (사전규격에서 본공고로 넘어온 것 포함). 사전규격은 [사전규격] 메뉴
   if(v==="pre")return n.isPre&&!n.bid;
   return true;
 }
