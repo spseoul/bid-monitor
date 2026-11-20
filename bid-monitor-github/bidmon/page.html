@@ -1774,7 +1774,7 @@ function renderMeet(el){
   const goAmt=todayDec.filter(x=>x.v.status==="go"||x.v.status==="joint").reduce((a,x)=>a+(x.n.estimated_price||x.n.budget||0),0);
   if(MT.cur===null||!pend.some(g=>g.n.key===MT.cur))MT.cur=pend.length?pend[0].n.key:null;
   const dep=k=>`<span class="dp" style="--c:${DEPTC(k)}">${esc(k)}</span>`;
-  const seg=key=>`<div class="seg">${["go","hold","no","joint"].map((k,x)=>`<button class="${k} ${(D[key]||{}).status===k?"on":""}" data-mdec="${esc(key)}" data-st="${k}"><kbd>${x+1}</kbd>${DECN[k]}</button>`).join("")}</div>`;
+  const seg=key=>`<div class="seg">${["go","hold","no","joint"].map((k,x)=>`<button class="${k} ${(D[key]||{}).status===k?"on":""}" data-mdec="${esc(key)}" data-st="${k}">${DECN[k]}</button>`).join("")}</div>`;
   const open=g=>{const n=g.n;return `<div class="mrow ${n.key===MT.cur?"cur":""}" data-mcur="${esc(n.key)}">
     <div class="mdd ${n.dd<=3?"hot":""}">D-${n.dd}</div>
     <div><div class="mt"><a href="#" data-key="${esc(n.key)}">${esc(n.title)}</a></div>
@@ -1818,7 +1818,7 @@ function renderMeet(el){
       <h4>불참<span>${by("no").length}건</span></h4><ul>${by("no").map(li).join("")||'<li class="e">아직 없음</li>'}</ul>
       ${pend.length?`<h4>미결<span>${pend.length}건</span></h4><ul>${pend.slice(0,8).map(g=>`<li class="e">${esc(g.n.title.slice(0,28))}…</li>`).join("")}</ul>`:""}
       <div class="foot">${MEET.meetings.length?`지난 회의: ${MEET.meetings.slice(-3).map(m=>`${m.date} (${m.n}건)`).join(" · ")}`:"첫 회의입니다."}</div>
-      <div class="foot"><button class="btn sm" data-msave="1">중간 저장</button> <span class="w">키보드: J/K 이동 · 1~4 결정</span></div>
+      <div class="foot"><button class="btn sm" data-msave="1">중간 저장</button></div>
     </div></div></div>`;
   // 이벤트
   el.querySelectorAll("[data-mdec]").forEach(b=>b.onclick=()=>{const k=b.dataset.mdec,st=b.dataset.st;const cur=D[k]||{};const g=items.find(g=>g.n.key===k);
