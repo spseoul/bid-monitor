@@ -758,6 +758,62 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .bootmsg{margin-top:14px;font-size:12.5px;color:var(--ink3);text-align:center;line-height:1.7;min-height:1.5em}
 .bootmsg a{color:var(--acc);margin:0 6px}
 #lock.boot .lk{opacity:1;animation:none}
+
+.deptsync{margin:2px 10px 4px;font-size:11px;color:var(--ink3)}
+.deptsync::before{content:"";display:inline-block;width:8px;height:8px;border-radius:50%;border:2px solid var(--line);border-top-color:var(--acc);margin-right:6px;vertical-align:-1px;animation:spin .8s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── 수주회의 (관리자) ── */
+.mt-wrap{font-size:13px}
+.mt-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin-bottom:10px}.mt-head .sp{flex:1}.mt-head .w,.w{color:var(--ink3)}
+.mt-sum{display:flex;flex-wrap:wrap;gap:8px;color:var(--ink2)}
+.mt-sum>span{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 12px}
+.mt-sum b{color:var(--ink);font-weight:700;font-size:15px;margin-right:3px}.mt-sum .warn b{color:var(--red)}
+.mt-prog{height:3px;background:var(--line);border-radius:3px;overflow:hidden;margin:12px 0 16px}.mt-prog i{display:block;height:100%;background:var(--acc)}
+.mt-cols{display:grid;grid-template-columns:minmax(0,1fr) 280px;gap:18px;align-items:start}
+@media (max-width:900px){.mt-cols{grid-template-columns:1fr}}
+.mt-sheet{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:4px 18px 8px;margin-bottom:14px}
+.mt-sheet h2{font-size:13px;font-weight:600;margin:0;padding:12px 0 6px;border:0}.mt-sheet h2 .c{color:var(--ink3);font-weight:400;margin-left:8px}
+.mrow{display:grid;grid-template-columns:48px minmax(0,1fr) auto;gap:12px;padding:12px 0;border-top:1px solid var(--line2);align-items:start}
+.mt-sheet h2+.mrow{border-top:0}
+.mrow.cur{background:color-mix(in srgb,var(--acc) 9%,transparent);margin:0 -10px;padding-left:10px;padding-right:10px;border-radius:9px;border-top-color:transparent}.mrow.cur+.mrow{border-top-color:transparent}
+.mrow.done{padding:9px 0;align-items:center}
+.mdd{font-size:12.5px;font-weight:600;color:var(--ink2);padding-top:2px;white-space:nowrap}.mdd.hot{color:var(--red)}
+.mrow .mt{font-size:14px;font-weight:600;line-height:1.4;word-break:keep-all}.mrow .mt a{color:inherit;text-decoration:none}.mrow .mt a:hover{color:var(--acc)}
+.mrow .mt.sm{font-size:13px;font-weight:500;color:var(--ink2)}
+.mmeta{color:var(--ink2);font-size:12px;margin-top:4px;display:flex;flex-wrap:wrap;gap:3px 10px}
+.mmeta .dp{color:var(--ink);font-weight:500}.mmeta .dp::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c);margin-right:5px}
+.mmeta .cf{color:var(--red);font-weight:500}
+.mops{margin-top:6px;display:grid;gap:3px}.mops p{margin:0;font-size:12.5px;color:var(--ink2);line-height:1.5}.mops p b{color:var(--ink);font-weight:600;margin-right:6px}.mops p.e{color:var(--ink3)}
+.mact{display:flex;flex-direction:column;gap:6px;align-items:flex-end}.mact.row{flex-direction:row;align-items:center;gap:8px}
+.mact .seg{display:inline-flex;gap:4px}
+.mact .seg button{border:1px solid var(--line);background:var(--panel);color:var(--ink2);padding:5px 10px;font-size:12px;cursor:pointer;border-radius:999px;font-weight:500}
+.mact .seg button:hover{color:var(--ink);border-color:var(--ink3)}
+.mact .seg button.on{color:#fff;border-color:transparent}
+.mact .seg button.on.go{background:var(--green)}.mact .seg button.on.hold{background:var(--amber);color:#1b1d22}.mact .seg button.on.no{background:var(--ink3)}.mact .seg button.on.joint{background:var(--purple)}
+.mact .seg kbd{font:inherit;font-size:10px;color:var(--ink3);margin-right:4px}.mact .seg button.on kbd{color:inherit;opacity:.75}
+.mact select,.mact input{border:1px solid var(--line);background:var(--fld);color:var(--ink);border-radius:8px;padding:4px 8px;font-size:12px}.mact input{width:200px}
+.btn.sm{padding:4px 9px;font-size:12px}
+.tag{display:inline-block;font-size:11.5px;font-weight:600;padding:2px 9px;border-radius:999px;white-space:nowrap}
+.tag.go,.tag.win{background:color-mix(in srgb,var(--green) 16%,transparent);color:var(--green)}
+.tag.hold{background:color-mix(in srgb,var(--amber) 22%,transparent);color:var(--amber)}
+.tag.no{background:var(--on);color:var(--ink2)}.tag.lose{background:color-mix(in srgb,var(--red) 12%,transparent);color:var(--red)}
+.tag.joint{background:color-mix(in srgb,var(--purple) 16%,transparent);color:var(--purple)}
+.mt-doc{background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:14px 16px;position:sticky;top:0}
+.mt-doc h3{font-size:13.5px;margin:0 0 2px}.mt-doc .sub{color:var(--ink3);font-size:11.5px;margin-bottom:8px}
+.mt-doc h4{font-size:12px;color:var(--ink2);margin:12px 0 4px;font-weight:600;display:flex;justify-content:space-between}.mt-doc h4 span{color:var(--ink3);font-weight:500}
+.mt-doc ul{list-style:none;margin:0;padding:0}.mt-doc li{font-size:12.5px;padding:3px 0;display:flex;gap:8px;align-items:baseline}
+.mt-doc li::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--k,var(--line));flex:none}.mt-doc li.e{color:var(--ink3)}.mt-doc li .w{color:var(--ink3)}
+.mt-doc .foot{margin-top:12px;padding-top:10px;border-top:1px solid var(--line2);font-size:11.5px;color:var(--ink3);line-height:1.6}
+/* 결정 배지 (목록·상세) */
+.lbl.dc{font-weight:600}.lbl.dc-go,.bg.dc-go{color:var(--green);border-color:color-mix(in srgb,var(--green) 50%,transparent)}
+.lbl.dc-hold,.bg.dc-hold{color:var(--amber);border-color:color-mix(in srgb,var(--amber) 60%,transparent)}
+.lbl.dc-no,.bg.dc-no{color:var(--ink3)}.lbl.dc-joint,.bg.dc-joint{color:var(--purple);border-color:color-mix(in srgb,var(--purple) 50%,transparent)}
+.right .lbl.dc{display:inline-flex}
+/* 부서 의견 입력 (상세) */
+.opbox{margin-top:14px;padding-top:12px;border-top:1px solid var(--line2)}
+.opbox label{font-size:12.5px;font-weight:600;display:block;margin-bottom:6px}.opbox label small{font-weight:400;color:var(--ink3);margin-left:6px}
+.opin{display:flex;gap:6px}.opin input{flex:1;border:1px solid var(--line);background:var(--fld);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:12.5px}
 </style>
 </head>
 <body>
@@ -830,7 +886,7 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 <section id="ac" aria-hidden="true">
   <div class="hd"><h2>관리자</h2><span class="cnt" id="acWho"></span><span class="r"><button class="x" id="acClose" title="닫기">×</button></span></div>
   <div class="acwrap"><nav class="actabs" id="acTabs">
-    <button data-t="home" class="on">개요</button><button data-t="depts">부서 관리</button><button data-t="watch">부서별 현황</button><button data-t="kw">회사 기본 키워드</button><button data-t="sys">설정</button>
+    <button data-t="home" class="on">개요</button><button data-t="depts">부서 관리</button><button data-t="watch">부서별 현황</button><button data-t="meet">수주회의</button><button data-t="kw">회사 기본 키워드</button><button data-t="sys">설정</button>
   </nav><div class="bd acbody" id="acBody"></div></div>
 </section>
 <section id="dm" aria-hidden="true"><div class="hd"><h2>부서 관리</h2><span class="cnt" id="dmCnt"></span><span class="r"><button class="x" id="dmClose" title="닫기">×</button></span></div><div class="bd" id="dmBody"></div></section>
@@ -1054,6 +1110,7 @@ function rowHTML(n){
     <span class="right">
       ${n.isToday?'<span class="lbl new"><span class="dot" style="background:var(--acc)"></span>NEW</span>':''}
       ${n.isRe&&!n.isPre?'<span class="lbl re">재공고</span>':''}
+      ${(()=>{const dc=decOf(n);return dc&&dc.status?`<span class="lbl dc dc-${dc.status}" title="수주회의 결정${dc.owner?" · 담당 "+esc(dc.owner):""}">${DECN[dc.status]}${dc.result?" · "+RESN[dc.result]:""}</span>`:"";})()}
       ${n.linked?'<span class="lbl link" title="관심 공고로 체크한 사전규격의 정식 입찰공고">관심 · 입찰공고</span>':(!n.isPre&&n.pre)?'<span class="lbl cv" title="사전규격을 거쳐 올라온 정식 입찰공고">사전규격→본공고</span>':''}
       ${n.isPre?'<span class="lbl pre"><span class="dot" style="background:var(--blue)"></span>사전규격</span>':''}
       ${(n.tags||"").split(",").filter(Boolean).map(t=>`<span class="lbl tag"><span class="dot" style="background:${TAGC[t]}"></span>${t}</span>`).join("")}
@@ -1190,8 +1247,9 @@ function homeAlerts(){
   // 묶음 알림: 같은 종류가 여러 건이면 한 줄 + 펼치기. k 는 날짜 단위로 고정해 '확인' 이 하루 유지되게
   const grp=(k,lvl,ico,t,items,opt={})=>{if(!items.length)return;A.push(Object.assign({k:k+":"+TODAY+":"+items.length,lvl,ico,t:t.replace("{n}",items.length),items,key:items.length===1?items[0].key:null},opt));};
   // 1 관심 공고 마감 (개별 — 가장 중요)
-  for(const n of live.filter(n=>!n.isPre&&isStar(n)&&n.dd!==null&&n.dd>=0&&n.dd<=3).sort((a,b)=>a.dd-b.dd))
-    A.push({k:"due:"+n.key+":"+n.dd,lvl:n.dd<=1?"red":"amb",ico:"⏰",t:`관심 공고 마감 ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title,key:n.key,tab:"sched"});
+  for(const n of live.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&n.dd<=3&&(isStar(n)||(decOf(n)||{}).status==="go"||(decOf(n)||{}).status==="joint")).sort((a,b)=>a.dd-b.dd)){
+    const dc=decOf(n);const mine=!dc||!dc.owner||!ACCESS||dc.owner===ACCESS.dept||ADMIN;if(!mine)continue;
+    A.push({k:"due:"+n.key+":"+n.dd,lvl:n.dd<=1?"red":"amb",ico:"⏰",t:`${dc&&(dc.status==="go"||dc.status==="joint")?"참여 결정 공고 제출":"관심 공고 마감"} ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title+(dc&&dc.owner?` · 담당 ${dc.owner}`:""),key:n.key,tab:"sched"});}
   // 2 사전규격 → 본공고 (관심 사전규격은 개별, 나머지는 묶음)
   const cv=uniq(m.filter(n=>!n.isPre&&n.pre&&(n.first_seen||"")>=d3));
   for(const n of cv.filter(n=>n.pre.starred))A.push({k:"cv:"+n.key,lvl:"amb",ico:"🔁",t:"관심 사전규격 → 본공고 올라옴",s:n.title,key:n.key});
@@ -1410,7 +1468,7 @@ function syncSrc(){
   $("s-default").textContent=S.src==="default"?"사용 중":"";
   $("s-mine").textContent=S.src==="mine"?"사용 중":(MYKW?"저장됨":"미설정");
   document.querySelectorAll(".dept-only").forEach(b=>b.hidden=!DSTATE);
-  let dn2=$("deptErr");if(!dn2){dn2=document.createElement("div");dn2.id="deptErr";dn2.className="depterr";const anchor=document.querySelector('.it[data-src="mine"]');if(anchor)anchor.insertAdjacentElement("afterend",dn2);}
+  let dn2=$("deptErr");if(!dn2){dn2=document.createElement("div");dn2.id="deptErr";dn2.className="depterr";const anchor=document.querySelector('.it[data-src="mine"]');if(anchor){anchor.insertAdjacentElement("afterend",dn2);const sy=document.createElement("div");sy.id="deptSync";sy.className="deptsync";sy.hidden=true;sy.textContent="부서 설정 동기화 중…";anchor.insertAdjacentElement("afterend",sy);}}
   if(dn2){dn2.hidden=!(ACCESS&&!DSTATE&&DSTATE_ERR);dn2.innerHTML=ACCESS&&!DSTATE&&DSTATE_ERR?`<b>부서 키워드·관심 공고 공유 안 됨</b><br>${esc(DSTATE_ERR)}<br><span class="lnk2" onclick="location.reload()">다시 시도</span>`:"";}
   // 부서 공유 모드에서는 개인 계정이 없으므로 '내 키워드'(기기별)는 숨김 → 회사 기본값 / 부서 키워드 두 가지만
   document.querySelectorAll('[data-src="mine"]').forEach(b=>b.hidden=!!DSTATE);
@@ -1512,6 +1570,7 @@ function openDetail(key,tab){
   const bds=[`<span class="bg st ${st[1]}">${st[0]}</span>`];
   if(bid&&pre)bds.push('<span class="bg" style="color:var(--acc)">사전규격→본공고</span>');
   if(main.isRe)bds.push('<span class="bg" style="color:var(--orange)">재공고</span>');
+  {const dc=decOf(main);if(dc&&dc.status)bds.push(`<span class="bg dc-${dc.status}">${DECN[dc.status]}${dc.owner?" · "+esc(dc.owner):""}${dc.result?" · "+RESN[dc.result]:""}</span>`);}
   if(main.ord&&main.ord!=="00"&&main.ord!=="000")bds.push(`<span class="bg" style="color:var(--orange)">변경 ${esc(String(main.ord).replace(/^0+/,""))}차${main.older?` · 이전 ${main.older}건 숨김`:""}</span>`);
   if(main.award_method)bds.push(`<span class="bg">${esc(main.award_method.split("-")[0].trim())}</span>`);
   if(main.service_div)bds.push(`<span class="bg">${esc(main.service_div)}</span>`);
@@ -1579,6 +1638,8 @@ function openDetail(key,tab){
     <button class="btn" data-starkey="${esc(target.key)}">${target.starred?"☆ 관심 해제":"★ 관심 공고로"}</button>
     ${target.starred?'<button class="btn" data-gosum="1">요약표</button>':""}
   </div>`;
+  if(target.starred&&ACCESS&&!ADMIN){const cur=(STAR[target.key]||{}).op||"";h+=`<div class="opbox"><label>수주회의 의견 <small>부서장 회의 안건에 이 공고와 함께 올라갑니다</small></label><div class="opin"><input id="opIn" maxlength="120" placeholder="예: 참여 희망, 책임기술자 ○○○ · 유사실적 2건" value="${esc(cur)}"><button class="btn" data-opsave="${esc(target.key)}">저장</button></div></div>`;}
+  else if(target.starred&&ACCESS&&ADMIN){const cur=(STAR[target.key]||{}).op||"";if(cur)h+=`<div class="opbox"><label>부서 의견</label><div class="hint2">${esc(cur)}</div></div>`;}
   $("dBody").innerHTML=h;$("dBody").scrollTop=0;
   document.querySelectorAll(".row.sel").forEach(r=>r.classList.remove("sel"));
   document.querySelectorAll(`.row[data-key="${CSS.escape(key)}"]`).forEach(r=>r.classList.add("sel"));
@@ -1587,6 +1648,7 @@ function openDetail(key,tab){
 function closeDetail(){document.querySelectorAll(".row.sel").forEach(r=>r.classList.remove("sel"));$("dtl").classList.remove("open");$("dim").classList.remove("open");$("dtl").setAttribute("aria-hidden","true");}
 $("dIc").addEventListener("click",e=>{
   if(e.target.closest("[data-dclose]")){closeDetail();return;}
+  const ops=e.target.closest("[data-opsave]");if(ops){setOpinion(ops.dataset.opsave,($("opIn")||{}).value||"");toast("의견 저장됨");return;}
   const st=e.target.closest("[data-starkey]");if(st){const p=DATA.find(x=>x.key===st.dataset.starkey);if(!p)return;setStar(p.key,!p.starred,p);if(p.starred&&p.orphan)DATA.splice(DATA.indexOf(p),1);judgeAll();render();syncUI();openDetail(p.key);return;}
   if(e.target.closest("[data-share]")){const n=DATA.find(x=>x.key===D_KEY);if(!n)return;const m=n.isPre?(n.bid||n):n;
     const txt=`${m.title}\n${instOf(m)} · ${m.estimated_price||m.budget?"추정 "+eok(m.estimated_price||m.budget)+" · ":""}마감 ${m.close_date||"미정"}\n${m.isPre?preUrl(m):(m.url||"")}`;
@@ -1675,6 +1737,117 @@ async function openDepts(target){
     el.innerHTML=h||'<div class="empty">부서 상태 파일이 아직 없습니다.</div>';
   }catch(e){el.innerHTML='<div class="empty">불러오지 못했습니다: '+esc(e.message||e)+'</div>';}
 }
+/* ── 관리자: 수주회의 — 부서별 관심 공고를 안건으로 모아 결정하고 회의록을 남김 ── */
+let MT={cur:null,showDone:false,log:[]};
+async function gatherAgenda(){
+  const ADMD=(META_OBJ&&META_OBJ.admin_dept)||"관리자";
+  const depts=(M_DEPTS||[]).filter(d=>d!==ADMD);
+  const byKey={};   // key → {n, depts:[], ops:{dept:text}}
+  for(const d of depts){
+    let st={star:{}};
+    if(ACCESS&&d===ACCESS.dept&&DSTATE)st={star:STAR};
+    else{try{st=(await fetchState(d)).state;}catch(e){continue;}}
+    for(const [k,o] of Object.entries(st.star||{})){
+      let n=DATA.find(x=>x.key===k);if(!n)continue;
+      const m=n.isPre?(n.bid||n):n;                       // 사전규격을 체크했어도 본공고가 올라왔으면 본공고를 안건으로
+      const g=byKey[m.key]=byKey[m.key]||{n:m,depts:[],ops:{}};
+      if(!g.depts.includes(d))g.depts.push(d);
+      if(o.op)g.ops[d]=o.op;
+    }
+  }
+  return Object.values(byKey);
+}
+async function openMeet(el){
+  el.innerHTML='<div class="empty">부서별 관심 공고를 모으는 중…</div>';
+  await loadMeet();
+  MT.items=await gatherAgenda();
+  renderMeet(el);
+}
+function renderMeet(el){
+  const items=MT.items||[], D=MEET.decisions, today=TODAY;
+  const live=items.filter(g=>g.n.dd!==null&&g.n.dd>=0);
+  const pend=live.filter(g=>!D[g.n.key]||!D[g.n.key].status).sort((a,b)=>a.n.dd-b.n.dd);
+  const todayDec=Object.entries(D).filter(([k,v])=>v.status&&v.at===today).map(([k,v])=>({k,v,n:DATA.find(x=>x.key===k)})).filter(x=>x.n);
+  const follow=Object.entries(D).filter(([k,v])=>(v.status==="go"||v.status==="joint")&&!v.result).map(([k,v])=>({k,v,n:DATA.find(x=>x.key===k)})).filter(x=>x.n&&x.n.dd!==null&&x.n.dd>=0&&v_at(x.v)!==today);
+  const closed=Object.entries(D).filter(([k,v])=>(v.status==="go"||v.status==="joint")).map(([k,v])=>({k,v,n:DATA.find(x=>x.key===k)||null})).filter(x=>x.n?x.n.dd!==null&&x.n.dd<0:true).filter(x=>!x.v.result||(x.v.result_at||"")>=new Date(new Date(today+"T00:00:00").getTime()-14*864e5).toISOString().slice(0,10));
+  const conf=pend.filter(g=>g.depts.length>1).length;
+  const goAmt=todayDec.filter(x=>x.v.status==="go"||x.v.status==="joint").reduce((a,x)=>a+(x.n.estimated_price||x.n.budget||0),0);
+  if(MT.cur===null||!pend.some(g=>g.n.key===MT.cur))MT.cur=pend.length?pend[0].n.key:null;
+  const dep=k=>`<span class="dp" style="--c:${DEPTC(k)}">${esc(k)}</span>`;
+  const seg=key=>`<div class="seg">${["go","hold","no","joint"].map((k,x)=>`<button class="${k} ${(D[key]||{}).status===k?"on":""}" data-mdec="${esc(key)}" data-st="${k}"><kbd>${x+1}</kbd>${DECN[k]}</button>`).join("")}</div>`;
+  const open=g=>{const n=g.n;return `<div class="mrow ${n.key===MT.cur?"cur":""}" data-mcur="${esc(n.key)}">
+    <div class="mdd ${n.dd<=3?"hot":""}">D-${n.dd}</div>
+    <div><div class="mt"><a href="#" data-key="${esc(n.key)}">${esc(n.title)}</a></div>
+      <div class="mmeta">${g.depts.map(dep).join("")}<span>${esc(shortInst(instOf(n)))}</span>${(n.estimated_price||n.budget)?`<span>추정 ${eok(n.estimated_price||n.budget)}</span>`:""}${n.award_method?`<span>${esc(n.award_method.split("-")[0].trim())}</span>`:""}<span>마감 ${esc((n.close_date||"").slice(5,10))}</span>${g.depts.length>1?'<span class="cf">두 부서가 함께 체크</span>':""}</div>
+      ${Object.keys(g.ops).length?`<div class="mops">${Object.entries(g.ops).map(([k,v])=>`<p><b>${esc(k)}</b>${esc(v)}</p>`).join("")}</div>`:'<div class="mops"><p class="e">부서 의견 없음 — 부서가 관심 공고 상세에서 "수주회의 의견"을 적을 수 있습니다</p></div>'}
+    </div>
+    <div class="mact">${seg(n.key)}</div></div>`;};
+  const done=x=>{const n=x.n,v=x.v,g=items.find(g=>g.n.key===x.k);return `<div class="mrow done">
+    <div class="mdd ${n.dd!==null&&n.dd>=0&&n.dd<=3?"hot":""}">${n.dd===null?"—":n.dd<0?"마감":"D-"+n.dd}</div>
+    <div class="mt sm"><a href="#" data-key="${esc(n.key)}">${esc(n.title)}</a></div>
+    <div class="mact row">
+      <span class="tag ${v.status}">${DECN[v.status]}</span>
+      ${v.status!=="no"?`<select data-mown="${esc(x.k)}">${["",...(M_DEPTS||[])].map(k=>`<option value="${esc(k)}" ${v.owner===k?"selected":""}>${k||"담당 부서"}</option>`).join("")}</select>`:""}
+      <input data-mwhy="${esc(x.k)}" placeholder="사유" value="${esc(v.why||"")}">
+      <button class="btn sm" data-mundo="${esc(x.k)}">되돌리기</button>
+    </div></div>`;};
+  const res=x=>{const n=x.n,v=x.v;return `<div class="mrow done">
+    <div class="mdd">${n&&(n.estimated_price||n.budget)?eok(n.estimated_price||n.budget):"—"}</div>
+    <div><div class="mt sm">${n?`<a href="#" data-key="${esc(x.k)}">${esc(n.title)}</a>`:esc(x.k)}</div><div class="mmeta">${v.owner?dep(v.owner):""}<span>결정 ${esc(v.at||"")}</span>${v.result_note?`<span>${esc(v.result_note)}</span>`:""}</div></div>
+    <div class="mact row"><select data-mres="${esc(x.k)}"><option value="">결과 입력</option>${Object.entries(RESN).map(([k,l])=>`<option value="${k}" ${v.result===k?"selected":""}>${l}</option>`).join("")}</select>${v.result?`<span class="tag ${v.result==="win"?"win":"lose"}">${RESN[v.result]}</span>`:""}</div></div>`;};
+  const col={go:"var(--green)",hold:"var(--amber)",no:"var(--ink3)",joint:"var(--purple)"};
+  const li=x=>`<li style="--k:${col[x.v.status]}"><span>${esc(x.n.title.length>28?x.n.title.slice(0,28)+"…":x.n.title)}<span class="w"> ${esc(x.v.owner||"")}${x.v.why?` · ${esc(x.v.why)}`:""}</span></span></li>`;
+  const by=k=>todayDec.filter(x=>x.v.status===k);
+  el.innerHTML=`<div class="mt-wrap">
+    <div class="mt-head"><div><b>${esc(today)}</b> <span class="w">부서 ${(M_DEPTS||[]).filter(d=>d!==((META_OBJ&&META_OBJ.admin_dept)||"관리자")).length}개 · 안건 ${live.length}건</span></div>
+      <span class="sp"></span>
+      <button class="btn" data-mcopy="1">회의록 복사</button><button class="btn" data-mcsv="1">엑셀(CSV)</button>
+      <button class="btn primary" data-mclose="1" ${pend.length?"disabled":""}>${MEET_DIRTY?"회의 종료 · 저장":"회의 종료"}</button></div>
+    <div class="mt-sum"><span>결정 필요 <b>${pend.length}</b>건</span><span class="${conf?"warn":""}">부서 충돌 <b>${conf}</b>건</span><span>참여 진행 <b>${follow.length+todayDec.filter(x=>x.v.status==="go"||x.v.status==="joint").length}</b>건</span><span>오늘 참여 결정 예산 <b>${eok(goAmt)||"0"}</b></span><span>결과 대기 <b>${closed.filter(x=>!x.v.result).length}</b>건</span></div>
+    <div class="mt-prog"><i style="width:${live.length?Math.round((live.length-pend.length)/live.length*100):0}%"></i></div>
+    ${MEET_DIRTY?'<div class="dmnote warn">저장되지 않은 결정이 있습니다 — [회의 종료] 또는 아래 [중간 저장]을 누르세요.</div>':""}
+    <div class="mt-cols"><div>
+      <div class="mt-sheet"><h2>결정 필요<span class="c">${pend.length?`${pend.length}건, 마감 가까운 순`:"모두 결정했습니다"}</span></h2>${pend.map(open).join("")||'<div class="empty">부서가 체크한 공고 중 결정할 것이 없습니다.</div>'}</div>
+      ${todayDec.length?`<div class="mt-sheet"><h2>오늘 결정<span class="c">${todayDec.length}건</span></h2>${todayDec.map(done).join("")}</div>`:""}
+      <div class="mt-sheet"><h2>참여 진행 중<span class="c">이전 회의에서 참여 결정, 마감 전</span></h2>${follow.map(x=>`<div class="mrow done"><div class="mdd ${x.n.dd<=3?"hot":""}">D-${x.n.dd}</div><div><div class="mt sm"><a href="#" data-key="${esc(x.k)}">${esc(x.n.title)}</a></div><div class="mmeta">${x.v.owner?dep(x.v.owner):""}<span>결정 ${esc(x.v.at||"")}</span>${x.v.why?`<span>${esc(x.v.why)}</span>`:""}</div></div><div class="mact row"><span class="tag ${x.v.status}">${DECN[x.v.status]}</span><button class="btn sm" data-mundo="${esc(x.k)}">취소</button></div></div>`).join("")||'<div class="empty">없음</div>'}</div>
+      <div class="mt-sheet"><h2>결과<span class="c">마감 지난 참여 건 — 낙찰·탈락·유찰 입력</span></h2>${closed.map(res).join("")||'<div class="empty">결과를 입력할 건이 없습니다.</div>'}</div>
+    </div>
+    <div class="mt-doc"><h3>회의록</h3><div class="sub">${esc(today)} · 결정 ${todayDec.length}건${pend.length?` · 미결 ${pend.length}건`:""}</div>
+      <h4>참여<span>${by("go").length+by("joint").length}건${goAmt?` · ${eok(goAmt)}`:""}</span></h4><ul>${[...by("go"),...by("joint")].map(li).join("")||'<li class="e">아직 없음</li>'}</ul>
+      <h4>보류<span>${by("hold").length}건</span></h4><ul>${by("hold").map(li).join("")||'<li class="e">아직 없음</li>'}</ul>
+      <h4>불참<span>${by("no").length}건</span></h4><ul>${by("no").map(li).join("")||'<li class="e">아직 없음</li>'}</ul>
+      ${pend.length?`<h4>미결<span>${pend.length}건</span></h4><ul>${pend.slice(0,8).map(g=>`<li class="e">${esc(g.n.title.slice(0,28))}…</li>`).join("")}</ul>`:""}
+      <div class="foot">${MEET.meetings.length?`지난 회의: ${MEET.meetings.slice(-3).map(m=>`${m.date} (${m.n}건)`).join(" · ")}`:"첫 회의입니다."}</div>
+      <div class="foot"><button class="btn sm" data-msave="1">중간 저장</button> <span class="w">키보드: J/K 이동 · 1~4 결정</span></div>
+    </div></div></div>`;
+  // 이벤트
+  el.querySelectorAll("[data-mdec]").forEach(b=>b.onclick=()=>{const k=b.dataset.mdec,st=b.dataset.st;const cur=D[k]||{};const g=items.find(g=>g.n.key===k);
+    if(cur.status===st){MEET._deleted=MEET._deleted||{};delete D[k];MEET._deleted[k]=1;}else D[k]={status:st,owner:cur.owner||(g&&g.depts.length===1?g.depts[0]:""),why:cur.why||"",at:today,by:ACCESS?ACCESS.dept:""};
+    MEET_DIRTY=true;MT.cur=null;MT.log.push([k,st]);renderMeet(el);});
+  el.querySelectorAll("[data-mundo]").forEach(b=>b.onclick=()=>{const k=b.dataset.mundo;MEET._deleted=MEET._deleted||{};delete D[k];MEET._deleted[k]=1;MEET_DIRTY=true;renderMeet(el);});
+  el.querySelectorAll("[data-mown]").forEach(x=>x.onchange=()=>{D[x.dataset.mown].owner=x.value;MEET_DIRTY=true;renderMeet(el);});
+  el.querySelectorAll("[data-mwhy]").forEach(x=>x.onchange=()=>{D[x.dataset.mwhy].why=x.value;MEET_DIRTY=true;});
+  el.querySelectorAll("[data-mres]").forEach(x=>x.onchange=()=>{D[x.dataset.mres].result=x.value||undefined;D[x.dataset.mres].result_at=today;MEET_DIRTY=true;renderMeet(el);});
+  el.querySelectorAll("[data-mcur]").forEach(r=>r.addEventListener("click",e=>{if(e.target.closest("button,a,select,input"))return;MT.cur=r.dataset.mcur;el.querySelectorAll(".mrow.cur").forEach(x=>x.classList.remove("cur"));r.classList.add("cur");}));
+  el.querySelectorAll(".mt a[data-key]").forEach(a=>a.onclick=e=>{e.preventDefault();openDetail(a.dataset.key);});
+  const minutesText=()=>{const L=[`수주회의 ${today}`,``];for(const k of ["go","joint","hold","no"]){const xs=by(k);if(!xs.length)continue;L.push(`[${DECN[k]} ${xs.length}건]`);xs.forEach(x=>L.push(`- ${x.n.title} / ${x.v.owner||"-"} / ${eok(x.n.estimated_price||x.n.budget)||"-"} / 마감 ${(x.n.close_date||"").slice(0,10)}${x.v.why?` / ${x.v.why}`:""}`));L.push("");}
+    if(pend.length){L.push(`[미결 ${pend.length}건]`);pend.forEach(g=>L.push(`- ${g.n.title} (${g.depts.join(", ")})`));}return L.join("\n");};
+  const q=sel=>el.querySelector(sel);
+  if(q("[data-mcopy]"))q("[data-mcopy]").onclick=()=>{navigator.clipboard.writeText(minutesText()).then(()=>toast("회의록을 복사했습니다"),()=>toast("복사 실패"));};
+  if(q("[data-mcsv]"))q("[data-mcsv]").onclick=()=>{const rows=[["결정","공고명","담당","발주기관","추정가격","마감","사유","결정일"]];Object.entries(D).forEach(([k,v])=>{const n=DATA.find(x=>x.key===k);if(!n)return;rows.push([DECN[v.status]||"",n.title,v.owner||"",instOf(n),n.estimated_price||n.budget||"",(n.close_date||"").slice(0,10),v.why||"",v.at||""]);});
+    const csv="\ufeff"+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`수주회의_${today}.csv`;a.click();};
+  if(q("[data-msave]"))q("[data-msave]").onclick=()=>saveMeet("중간 저장").then(()=>renderMeet(el));
+  if(q("[data-mclose]"))q("[data-mclose]").onclick=async()=>{const n=todayDec.length;if(n){const m=MEET.meetings.filter(m=>m.date!==today);m.push({date:today,n,go:by("go").length+by("joint").length,hold:by("hold").length,no:by("no").length,keys:todayDec.map(x=>x.k)});MEET.meetings=m;}
+    if(await saveMeet("회의 종료")){toast(`회의 종료 — 결정 ${n}건이 각 부서 화면에 표시됩니다`);judgeAll();render();renderMeet(el);}};
+  el.onkeydown=null;
+  document.onkeydown=e=>{if(!$("dv").classList.contains("open")||!el.querySelector(".mt-wrap"))return;if(/INPUT|SELECT|TEXTAREA/.test(e.target.tagName))return;
+    const keys=pend.map(g=>g.n.key);if(!keys.length)return;const i=keys.indexOf(MT.cur);
+    if(e.key==="j"||e.key==="ArrowDown"){MT.cur=keys[Math.min(keys.length-1,i+1)];renderMeet(el);e.preventDefault();}
+    else if(e.key==="k"||e.key==="ArrowUp"){MT.cur=keys[Math.max(0,i-1)];renderMeet(el);e.preventDefault();}
+    else if("1234".includes(e.key)&&MT.cur){const b=el.querySelector(`[data-mdec="${CSS.escape(MT.cur)}"][data-st="${["go","hold","no","joint"][+e.key-1]}"]`);if(b)b.click();}};
+}
+const v_at=v=>v.at||"";
+const DEPTC=k=>{const C=["#3b82f6","#8b5cf6","#10b981","#f59e0b","#ef4444","#06b6d4"];const i=(M_DEPTS||[]).indexOf(k);return C[(i<0?0:i)%C.length];};
 /* ── 관리자: 부서 추가/비밀번호 변경/삭제 → bidmon/access.json (부서키를 RSA 공개키로 봉인; 비밀번호는 어디에도 저장 안 됨) ── */
 const accessPath=()=>GH_PATH?GH_PATH.replace(/config\.yaml$/,"bidmon/access.json"):"bidmon/access.json";
 const mgrTok=()=>TOKEN||(ACCESS&&ACCESS.tok)||"";
@@ -1832,6 +2005,10 @@ async function acShow(t){
   else if(t==="watch"){
     if(!ACCESS){el.innerHTML='<div class="dmnote">부서별 관심 공고는 잠금이 켜진 뒤(부서 로그인 후)에 볼 수 있습니다. 먼저 [부서 관리]에서 부서를 등록하고 수집이 한 번 돌면 로그인 화면이 켜집니다.</div>';return;}
     await openDepts(el);
+  }
+  else if(t==="meet"){
+    if(!ACCESS){el.innerHTML='<div class="dmnote">수주회의는 잠금이 켜진 뒤(관리자 로그인 후)에 쓸 수 있습니다.</div>';return;}
+    await openMeet(el);
   }
   else if(t==="kw"){
     el.innerHTML=`<div class="dmnote">모든 부서가 공통으로 쓰는 기본 키워드입니다. 부서가 자체 키워드를 저장하면 그 부서는 자기 것을 우선 사용합니다. 한 줄에 하나.</div>
@@ -2274,6 +2451,41 @@ async function saveDeptState(mutate,label){
   }catch(e){const m=/401|403/.test(String(e.message))?"저장 권한(토큰) 문제 — 관리자에게 문의":/404/.test(String(e.message))?"저장소 경로를 찾을 수 없음":(e.message||e);
     t.err(label+" 공유 저장 실패: "+m+" — 다른 기기에서는 반영되지 않습니다");sysNote(label+" 부서 공유 저장 실패 ("+(e.message||e)+")");return false;}
 }
+/* ── 수주회의: 전사 공유 결정 파일 docs/state/_수주회의.json (부서 파일과 같은 키로 암호화) ── */
+const MEET_NAME="_수주회의", DECN={go:"참여",hold:"보류",no:"불참",joint:"공동참여"}, RESN={win:"낙찰",lose:"탈락",fail:"유찰",skip:"미제출"};
+let MEET={decisions:{},meetings:[]}, MEET_DIRTY=false;
+const decOf=n=>{const m=n.isPre?(n.bid||n):n;return MEET.decisions[m.key]||(n.pre&&MEET.decisions[n.pre.key])||null;};
+async function loadMeet(){
+  if(!ACCESS||!GH_REPO||!cleanTok(ACCESS.tok||""))return;
+  try{const {state}=await fetchState(MEET_NAME);if(state&&state.decisions)MEET={decisions:state.decisions||{},meetings:state.meetings||[]};}
+  catch(e){if(e.message!=="STATE_UNREADABLE")sysNote("수주회의 기록을 불러오지 못함: "+(e.message||e));}
+}
+async function saveMeet(label){
+  const t=toast(label+" 저장 중…",0);
+  try{
+    let last="";
+    for(let i=0;i<3;i++){
+      let sha,state;
+      try{({sha,state}=await fetchState(MEET_NAME));}catch(e){if(e.message!=="STATE_UNREADABLE")throw e;sha=e.sha;state={};}
+      const cur=Object.assign({decisions:{},meetings:[]},state&&state.decisions?state:{});
+      // 병합: 결정은 더 최근(at)이 이김, 회의록은 날짜별 유일
+      for(const [k,v] of Object.entries(MEET.decisions)){const o=cur.decisions[k];if(!o||(v.at||"")>=(o.at||""))cur.decisions[k]=v;}
+      for(const k of Object.keys(cur.decisions))if(!MEET.decisions[k]&&MEET._deleted&&MEET._deleted[k])delete cur.decisions[k];
+      const seen=new Set();cur.meetings=[...(MEET.meetings||[]),...(cur.meetings||[])].filter(m=>{if(seen.has(m.date))return false;seen.add(m.date);return true;}).sort((a,b)=>a.date.localeCompare(b.date)).slice(-52);
+      cur.updated=new Date().toISOString().slice(0,16).replace("T"," ");
+      const blob=await encryptBlob(cur,ACCESS.skey||ACCESS.dkey);
+      const put=await fetch(stateUrl(MEET_NAME),{method:"PUT",headers:{...GH_H(),"Content-Type":"application/json"},body:JSON.stringify({message:`수주회의 ${label}`,content:b64utf(JSON.stringify(blob)),sha,branch:"main"})});
+      if(put.ok){MEET={decisions:cur.decisions,meetings:cur.meetings};MEET_DIRTY=false;t.ok(label+" 저장됨");return true;}
+      last=put.status;if(put.status!==409&&put.status!==422)break;await new Promise(r=>setTimeout(r,600));
+    }
+    throw new Error("HTTP "+last);
+  }catch(e){t.err(label+" 저장 실패: "+(e.message||e));sysNote("수주회의 저장 실패 ("+(e.message||e)+")");return false;}
+}
+/* 부서 의견 한 줄: 자기 부서 관심 공고에만 */
+function setOpinion(key,text){
+  if(!STAR[key])return;STAR[key].op=text;save(LS_STAR,STAR);
+  if(DSTATE)saveDeptState(st=>{st.star=st.star||{};if(st.star[key])st.star[key].op=text;},"수주회의 의견");
+}
 /* 시스템 알림: 일반 사용자에게는 띄우지 않고 기록만, 관리자에게만 표시 */
 const SYS_LOG=[];
 function sysNote(msg){SYS_LOG.push([new Date().toTimeString().slice(0,5),msg]);console.warn("[bidmon]",msg);if(ADMIN)toast(msg,6000).err(msg);}
@@ -2319,11 +2531,9 @@ async function loadData(){
       $("who").innerHTML=`<span>${esc(ACCESS.dept)}</span> 로 접속 · <a href="#" id="lockOut">나가기</a>`;$("lockOut").onclick=e=>{e.preventDefault();lockOut();};
       if(m.admin_dept&&ACCESS.dept===m.admin_dept){ADMIN=true;if(payload.admin_token_enc&&PW){try{TOKEN=await unlock(payload.admin_token_enc,PW);}catch(e){}}}
       GH_REPO=payload.github_repo||"";
-      bootMsg(`${ACCESS.dept} · 부서 설정 불러오는 중…`);
-      await loadDeptState();
       clearTimeout(BOOT_WD);
-      syncSrc();                                             // 부서 메뉴/내 키워드 표시를 먼저 맞춘 뒤 커버를 내림
-      $("lock").classList.remove("open","boot");
+      syncSrc();
+      $("lock").classList.remove("open","boot");             // 부서 설정(GitHub)은 기다리지 않고 화면부터 보여줌 → 아래에서 뒤늦게 적용
     }
     DEFAULT_KW=normKW(m.kw)||DEFAULT_KW; BUILT=m.built||BUILT; NOW=new Date(BUILT); TODAY=BUILT.slice(0,10); LAST_VER=m.ver||null;
     CONFIG_HEAD=m.config_head||""; HEAD=CONFIG_HEAD; ADMIN_HASH=m.admin_hash||""; GH_REPO=m.github_repo||""; GH_PATH=m.github_config_path||""; TOKEN_ENC=m.admin_token_enc||"";
@@ -2346,6 +2556,10 @@ async function loadData(){
   }
   judgeAll();render();syncUI();
   loadLiveDefaults();
+  if(M_LOCKED&&ACCESS){                                      // 부서 키워드·관심 공고는 이 기기 사본으로 먼저 그리고, GitHub 에서 받아오면 바꿔 그림
+    const el=$("deptSync");if(el)el.hidden=false;
+    loadDeptState().catch(()=>{}).then(()=>loadMeet()).catch(()=>{}).then(()=>{if(el)el.hidden=true;syncSrc();judgeAll();render();syncUI();});
+  }
 }
 loadData();
 /* ── PWA: 홈 화면 추가 + 오프라인 캐시 ── */
