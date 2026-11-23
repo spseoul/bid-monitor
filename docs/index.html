@@ -236,7 +236,7 @@ svg.st{width:14px;height:14px;flex:none}
 #dim{position:fixed;inset:0;background:rgba(0,0,0,.28);z-index:60;display:none}
 #dim.open{display:block}
 #dtl{position:fixed;top:0;right:0;bottom:0;width:min(520px,100%);background:var(--panel,var(--bg));border-left:1px solid var(--line);z-index:61;display:flex;flex-direction:column;transform:translateX(100%);transition:transform .18s ease;box-shadow:-12px 0 40px rgba(0,0,0,.12)}
-#dtl.open{transform:none}
+#dtl.open{transform:none;z-index:81}#dim.open{z-index:80}
 #dtl .hd{padding:16px 18px 12px;border-bottom:1px solid var(--line2);display:flex;gap:10px;align-items:flex-start}
 #dtl .hd .ttl{font-size:15px;font-weight:600;line-height:1.4;flex:1;word-break:keep-all}
 #dtl .hd .x{border:0;background:none;font-size:20px;color:var(--ink3);cursor:pointer;line-height:1;padding:2px 4px}
@@ -814,6 +814,27 @@ textarea{width:100%;height:132px;font:inherit;font-size:12.5px;line-height:1.55;
 .opbox{margin-top:14px;padding-top:12px;border-top:1px solid var(--line2)}
 .opbox label{font-size:12.5px;font-weight:600;display:block;margin-bottom:6px}.opbox label small{font-weight:400;color:var(--ink3);margin-left:6px}
 .opin{display:flex;gap:6px}.opin input{flex:1;border:1px solid var(--line);background:var(--fld);color:var(--ink);border-radius:8px;padding:7px 10px;font-size:12.5px}
+
+/* 부서 의견 입력(상세) · 안건 표 · 부서 선택 칩 */
+.opf{display:grid;gap:6px}
+.opr{display:grid;grid-template-columns:84px 1fr;align-items:center;gap:8px}
+.opr>span{font-size:12px;color:var(--ink2)}
+.opr input{border:1px solid var(--line);background:var(--fld);color:var(--ink);border-radius:8px;padding:6px 9px;font-size:12.5px;width:100%}
+.opseg{display:inline-flex;gap:4px}
+.opseg button{border:1px solid var(--line);background:var(--fld);color:var(--ink2);border-radius:999px;padding:4px 12px;font-size:12.5px;cursor:pointer}
+.opseg button.on{color:#fff;border-color:transparent}
+.w상{background:var(--green)}.w중{background:var(--amber);color:#1b1d22 !important}.w하{background:var(--ink3)}
+.opin{margin-top:8px;display:flex;gap:8px;align-items:center}
+table.mopt{width:100%;border-collapse:collapse;margin-top:8px;font-size:12px}
+table.mopt th{font-weight:500;color:var(--ink3);text-align:left;padding:2px 6px 4px 0;font-size:11px}
+table.mopt td{padding:4px 6px 4px 0;vertical-align:top;color:var(--ink2);border-top:1px solid var(--line2)}
+table.mopt td.d{white-space:nowrap}table.mopt td.n{color:var(--ink3)}
+table.mopt .want{display:inline-block;width:20px;height:20px;line-height:20px;text-align:center;border-radius:50%;color:#fff;font-size:11.5px;font-weight:600}
+.mpick{margin-top:8px;display:flex;flex-wrap:wrap;gap:5px;align-items:center}
+.mpick .w{font-size:11.5px;margin-right:4px}
+.mpick .pk{border:1px solid var(--line);background:var(--fld);color:var(--ink2);border-radius:999px;padding:3px 10px;font-size:12px;cursor:pointer}
+.mpick .pk::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--c);margin-right:5px;opacity:.5}
+.mpick .pk.on{color:var(--ink);border-color:var(--c);background:color-mix(in srgb,var(--c) 12%,transparent)}.mpick .pk.on::before{opacity:1}
 </style>
 </head>
 <body>
@@ -1250,7 +1271,7 @@ function homeAlerts(){
   const grp=(k,lvl,ico,t,items,opt={})=>{if(!items.length)return;A.push(Object.assign({k:k+":"+TODAY+":"+items.length,lvl,ico,t:t.replace("{n}",items.length),items,key:items.length===1?items[0].key:null},opt));};
   // 1 관심 공고 마감 (개별 — 가장 중요)
   for(const n of live.filter(n=>!n.isPre&&n.dd!==null&&n.dd>=0&&n.dd<=3&&(isStar(n)||(decOf(n)||{}).status==="go"||(decOf(n)||{}).status==="joint")).sort((a,b)=>a.dd-b.dd)){
-    const dc=decOf(n);const mine=!dc||!dc.owner||!ACCESS||dc.owner===ACCESS.dept||ADMIN;if(!mine)continue;
+    const dc=decOf(n);const mine=!dc||!dc.owner||!ACCESS||dc.owner===ACCESS.dept||(dc.members||[]).includes(ACCESS.dept)||ADMIN;if(!mine)continue;
     A.push({k:"due:"+n.key+":"+n.dd,lvl:n.dd<=1?"red":"amb",ico:"⏰",t:`${dc&&(dc.status==="go"||dc.status==="joint")?"참여 결정 공고 제출":"관심 공고 마감"} ${n.dd===0?"오늘":"D-"+n.dd}`,s:n.title+(dc&&dc.owner?` · 담당 ${dc.owner}`:""),key:n.key,tab:"sched"});}
   // 2 사전규격 → 본공고 (관심 사전규격은 개별, 나머지는 묶음)
   const cv=uniq(m.filter(n=>!n.isPre&&n.pre&&(n.first_seen||"")>=d3));
@@ -1640,8 +1661,14 @@ function openDetail(key,tab){
     <button class="btn" data-starkey="${esc(target.key)}">${target.starred?"☆ 관심 해제":"★ 관심 공고로"}</button>
     ${target.starred?'<button class="btn" data-gosum="1">요약표</button>':""}
   </div>`;
-  if(target.starred&&ACCESS&&!ADMIN){const cur=(STAR[target.key]||{}).op||"";h+=`<div class="opbox"><label>수주회의 의견 <small>부서장 회의 안건에 이 공고와 함께 올라갑니다</small></label><div class="opin"><input id="opIn" maxlength="120" placeholder="예: 참여 희망, 책임기술자 ○○○ · 유사실적 2건" value="${esc(cur)}"><button class="btn" data-opsave="${esc(target.key)}">저장</button></div></div>`;}
-  else if(target.starred&&ACCESS&&ADMIN){const cur=(STAR[target.key]||{}).op||"";if(cur)h+=`<div class="opbox"><label>부서 의견</label><div class="hint2">${esc(cur)}</div></div>`;}
+  if(target.starred&&ACCESS&&!ADMIN){const o=opObj((STAR[target.key]||{}).op);h+=`<div class="opbox"><label>수주회의 의견 <small>부서장 회의 안건에 이 공고와 함께 올라갑니다</small></label>
+      <div class="opf">
+        <div class="opr"><span>참여 희망</span><div class="opseg">${[["상","적극 참여"],["중","검토 필요"],["하","가능성 낮음"]].map(([v,l])=>`<button type="button" class="${o.want===v?"on w"+v:""}" data-opwant="${v}" title="${l}">${v}</button>`).join("")}</div></div>
+        <div class="opr"><span>책임기술자</span><input id="opPm" maxlength="40" placeholder="후보 이름 · 등급" value="${esc(o.pm||"")}"></div>
+        <div class="opr"><span>유사실적</span><input id="opExp" maxlength="60" placeholder="예: 지구단위계획 2건 (최근 5년)" value="${esc(o.exp||"")}"></div>
+        <div class="opr"><span>리스크·메모</span><input id="opNote" maxlength="120" placeholder="예: 공동수급 필요, 실적 기준 미달 우려" value="${esc(o.note||"")}"></div>
+      </div><div class="opin"><span class="hint2" style="flex:1">${o.at?"마지막 저장 "+esc(o.at):""}</span><button class="btn primary" data-opsave="${esc(target.key)}">의견 저장</button></div></div>`;}
+  else if(target.starred&&ACCESS&&ADMIN){const o=opObj((STAR[target.key]||{}).op);if(o.want||o.pm||o.exp||o.note)h+=`<div class="opbox"><label>부서 의견</label><div class="hint2">${esc(opLine(o))}</div></div>`;}
   $("dBody").innerHTML=h;$("dBody").scrollTop=0;
   document.querySelectorAll(".row.sel").forEach(r=>r.classList.remove("sel"));
   document.querySelectorAll(`.row[data-key="${CSS.escape(key)}"]`).forEach(r=>r.classList.add("sel"));
@@ -1650,7 +1677,6 @@ function openDetail(key,tab){
 function closeDetail(){document.querySelectorAll(".row.sel").forEach(r=>r.classList.remove("sel"));$("dtl").classList.remove("open");$("dim").classList.remove("open");$("dtl").setAttribute("aria-hidden","true");}
 $("dIc").addEventListener("click",e=>{
   if(e.target.closest("[data-dclose]")){closeDetail();return;}
-  const ops=e.target.closest("[data-opsave]");if(ops){setOpinion(ops.dataset.opsave,($("opIn")||{}).value||"");toast("의견 저장됨");return;}
   const st=e.target.closest("[data-starkey]");if(st){const p=DATA.find(x=>x.key===st.dataset.starkey);if(!p)return;setStar(p.key,!p.starred,p);if(p.starred&&p.orphan)DATA.splice(DATA.indexOf(p),1);judgeAll();render();syncUI();openDetail(p.key);return;}
   if(e.target.closest("[data-share]")){const n=DATA.find(x=>x.key===D_KEY);if(!n)return;const m=n.isPre?(n.bid||n):n;
     const txt=`${m.title}\n${instOf(m)} · ${m.estimated_price||m.budget?"추정 "+eok(m.estimated_price||m.budget)+" · ":""}마감 ${m.close_date||"미정"}\n${m.isPre?preUrl(m):(m.url||"")}`;
@@ -1661,6 +1687,8 @@ if(!load("bidmon.tip1",false))$("tip").hidden=false;
 $("tipX").onclick=()=>{$("tip").hidden=true;save("bidmon.tip1",true);};$("dim").onclick=()=>{closeDetail();closeFilter();};
 document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeDetail();closeFilter();}});
 $("dBody").addEventListener("click",e=>{
+  const opw=e.target.closest("[data-opwant]");if(opw){const on=opw.classList.contains("on");opw.parentElement.querySelectorAll("button").forEach(b=>{b.className="";});if(!on)opw.className="on w"+opw.dataset.opwant;return;}
+  const ops=e.target.closest("[data-opsave]");if(ops){const w=$("dBody").querySelector("[data-opwant].on");setOpinion(ops.dataset.opsave,{want:w?w.dataset.opwant:"",pm:($("opPm")||{}).value||"",exp:($("opExp")||{}).value||"",note:($("opNote")||{}).value||"",at:TODAY});toast("의견 저장됨 — 수주회의 안건에 반영됩니다");return;}
   const c=e.target.closest("[data-copyno]");if(c){navigator.clipboard&&navigator.clipboard.writeText(c.dataset.copyno).catch(()=>{});c.innerHTML=svgCopy+"복사됨";return;}
   const st=e.target.closest("[data-starkey]");if(st){const p=DATA.find(x=>x.key===st.dataset.starkey);if(!p)return;setStar(p.key,!p.starred,p);if(p.starred&&p.orphan)DATA.splice(DATA.indexOf(p),1);judgeAll();render();syncUI();openDetail(p.key);return;}
   if(e.target.closest("[data-gosum]")){closeDetail();openSummary();}
@@ -1754,10 +1782,13 @@ async function gatherAgenda(){
       const m=n.isPre?(n.bid||n):n;                       // 사전규격을 체크했어도 본공고가 올라왔으면 본공고를 안건으로
       const g=byKey[m.key]=byKey[m.key]||{n:m,depts:[],ops:{}};
       if(!g.depts.includes(d))g.depts.push(d);
-      if(o.op)g.ops[d]=o.op;
+      {const oo=opObj(o.op);if(oo.want||oo.pm||oo.exp||oo.note)g.ops[d]=oo;}
     }
   }
-  return Object.values(byKey);
+  const out=Object.values(byKey);
+  out.deptStat={};for(const d of depts)out.deptStat[d]={live:0,closed:0};
+  for(const g of out){for(const d of g.depts){const o=out.deptStat[d];if(!o)continue;if(g.n.dd!==null&&g.n.dd>=0)o.live++;else o.closed++;}}
+  return out;
 }
 async function openMeet(el){
   el.innerHTML='<div class="empty">부서별 관심 공고를 모으는 중…</div>';
@@ -1781,15 +1812,18 @@ function renderMeet(el){
     <div class="mdd ${n.dd<=3?"hot":""}">D-${n.dd}</div>
     <div><div class="mt"><a href="#" data-key="${esc(n.key)}">${esc(n.title)}</a></div>
       <div class="mmeta">${g.depts.map(dep).join("")}<span>${esc(shortInst(instOf(n)))}</span>${(n.estimated_price||n.budget)?`<span>추정 ${eok(n.estimated_price||n.budget)}</span>`:""}${n.award_method?`<span>${esc(n.award_method.split("-")[0].trim())}</span>`:""}<span>마감 ${esc((n.close_date||"").slice(5,10))}</span>${g.depts.length>1?'<span class="cf">두 부서가 함께 체크</span>':""}</div>
-      ${Object.keys(g.ops).length?`<div class="mops">${Object.entries(g.ops).map(([k,v])=>`<p><b>${esc(k)}</b>${esc(v)}</p>`).join("")}</div>`:'<div class="mops"><p class="e">부서 의견 없음 — 부서가 관심 공고 상세에서 "수주회의 의견"을 적을 수 있습니다</p></div>'}
+      ${Object.keys(g.ops).length?`<table class="mopt"><tr><th></th><th>희망</th><th>책임기술자</th><th>유사실적</th><th>리스크·메모</th></tr>${Object.entries(g.ops).map(([k,v])=>`<tr><td class="d">${dep(k)}</td><td>${v.want?`<span class="want w${v.want}">${v.want}</span>`:"—"}</td><td>${esc(v.pm||"—")}</td><td>${esc(v.exp||"—")}</td><td class="n">${esc(v.note||"—")}</td></tr>`).join("")}</table>`:'<div class="mops"><p class="e">부서 의견 없음 — 부서가 관심 공고 상세에서 "수주회의 의견"(희망도·책임기술자·실적·리스크)을 적을 수 있습니다</p></div>'}
     </div>
     <div class="mact">${seg(n.key)}</div></div>`;};
+  // 참여 → 주관 부서 하나 / 공동참여 → 여러 부서(첫 체크가 주관). 체크한 부서가 기본값
+  function deptPick(key,g){const v=D[key];if(!v||(v.status!=="go"&&v.status!=="joint"))return "";const all=(M_DEPTS||[]).filter(d=>d!==((META_OBJ&&META_OBJ.admin_dept)||"관리자"));
+    const sel=v.status==="joint"?(v.members||[]):(v.owner?[v.owner]:[]);
+    return `<div class="mpick"><span class="w">${v.status==="joint"?"참여 부서 (첫 체크가 주관)":"주관 부서"}</span>${all.map(d=>`<button type="button" class="pk ${sel.includes(d)?"on":""}" data-mpk="${esc(key)}" data-d="${esc(d)}" style="--c:${DEPTC(d)}">${esc(d)}</button>`).join("")}</div>`;}
   const done=x=>{const n=x.n,v=x.v,g=items.find(g=>g.n.key===x.k);return `<div class="mrow done">
     <div class="mdd ${n.dd!==null&&n.dd>=0&&n.dd<=3?"hot":""}">${n.dd===null?"—":n.dd<0?"마감":"D-"+n.dd}</div>
-    <div class="mt sm"><a href="#" data-key="${esc(n.key)}">${esc(n.title)}</a></div>
+    <div><div class="mt sm"><a href="#" data-key="${esc(n.key)}">${esc(n.title)}</a></div>${deptPick(x.k,g)}${(v.status==="go"||v.status==="joint")&&!v.owner?'<div class="mmeta"><span class="cf">부서를 골라 주세요</span></div>':""}</div>
     <div class="mact row">
       <span class="tag ${v.status}">${DECN[v.status]}</span>
-      ${v.status!=="no"?`<select data-mown="${esc(x.k)}">${["",...(M_DEPTS||[])].map(k=>`<option value="${esc(k)}" ${v.owner===k?"selected":""}>${k||"담당 부서"}</option>`).join("")}</select>`:""}
       <input data-mwhy="${esc(x.k)}" placeholder="사유" value="${esc(v.why||"")}">
       <button class="btn sm" data-mundo="${esc(x.k)}">되돌리기</button>
     </div></div>`;};
@@ -1798,13 +1832,13 @@ function renderMeet(el){
     <div><div class="mt sm">${n?`<a href="#" data-key="${esc(x.k)}">${esc(n.title)}</a>`:esc(x.k)}</div><div class="mmeta">${v.owner?dep(v.owner):""}<span>결정 ${esc(v.at||"")}</span>${v.result_note?`<span>${esc(v.result_note)}</span>`:""}</div></div>
     <div class="mact row"><select data-mres="${esc(x.k)}"><option value="">결과 입력</option>${Object.entries(RESN).map(([k,l])=>`<option value="${k}" ${v.result===k?"selected":""}>${l}</option>`).join("")}</select>${v.result?`<span class="tag ${v.result==="win"?"win":"lose"}">${RESN[v.result]}</span>`:""}</div></div>`;};
   const col={go:"var(--green)",hold:"var(--amber)",no:"var(--ink3)",joint:"var(--purple)"};
-  const li=x=>`<li style="--k:${col[x.v.status]}"><span>${esc(x.n.title.length>28?x.n.title.slice(0,28)+"…":x.n.title)}<span class="w"> ${esc(x.v.owner||"")}${x.v.why?` · ${esc(x.v.why)}`:""}</span></span></li>`;
+  const li=x=>`<li style="--k:${col[x.v.status]}"><span>${esc(x.n.title.length>28?x.n.title.slice(0,28)+"…":x.n.title)}<span class="w"> ${esc(x.v.status==="joint"?(x.v.members||[]).join("+"):(x.v.owner||""))}${x.v.why?` · ${esc(x.v.why)}`:""}</span></span></li>`;
   const by=k=>todayDec.filter(x=>x.v.status===k);
   el.innerHTML=`<div class="mt-wrap">
-    <div class="mt-head"><div><b>${esc(today)}</b> <span class="w">부서 ${(M_DEPTS||[]).filter(d=>d!==((META_OBJ&&META_OBJ.admin_dept)||"관리자")).length}개 · 안건 ${live.length}건</span></div>
+    <div class="mt-head"><div><b>${esc(today)}</b> <span class="w">안건 ${live.length}건 — ${Object.entries(items.deptStat||{}).map(([d,o])=>`${esc(d)} ${o.live}${o.closed?`<span class="w" title="마감이 지나 안건에서 뺀 관심 공고">(+마감 ${o.closed})</span>`:""}`).join(" · ")||"부서 관심 공고 없음"}</span></div>
       <span class="sp"></span>
       <button class="btn" data-mcopy="1">회의록 복사</button><button class="btn" data-mcsv="1">엑셀(CSV)</button>
-      <button class="btn primary" data-mclose="1" ${pend.length?"disabled":""}>${MEET_DIRTY?"회의 종료 · 저장":"회의 종료"}</button></div>
+      <button class="btn primary" data-mclose="1" ${pend.length||todayDec.some(x=>(x.v.status==="go"||x.v.status==="joint")&&!x.v.owner)?"disabled":""}>${MEET_DIRTY?"회의 종료 · 저장":"회의 종료"}</button></div>
     <div class="mt-sum"><span>결정 필요 <b>${pend.length}</b>건</span><span class="${conf?"warn":""}">부서 충돌 <b>${conf}</b>건</span><span>참여 진행 <b>${follow.length+todayDec.filter(x=>x.v.status==="go"||x.v.status==="joint").length}</b>건</span><span>오늘 참여 결정 예산 <b>${eok(goAmt)||"0"}</b></span><span>결과 대기 <b>${closed.filter(x=>!x.v.result).length}</b>건</span></div>
     <div class="mt-prog"><i style="width:${live.length?Math.round((live.length-pend.length)/live.length*100):0}%"></i></div>
     ${MEET_DIRTY?'<div class="dmnote warn">저장되지 않은 결정이 있습니다 — [회의 종료] 또는 아래 [중간 저장]을 누르세요.</div>':""}
@@ -1824,19 +1858,24 @@ function renderMeet(el){
     </div></div></div>`;
   // 이벤트
   el.querySelectorAll("[data-mdec]").forEach(b=>b.onclick=()=>{const k=b.dataset.mdec,st=b.dataset.st;const cur=D[k]||{};const g=items.find(g=>g.n.key===k);
-    if(cur.status===st){MEET._deleted=MEET._deleted||{};delete D[k];MEET._deleted[k]=1;}else D[k]={status:st,owner:cur.owner||(g&&g.depts.length===1?g.depts[0]:""),why:cur.why||"",at:today,by:ACCESS?ACCESS.dept:""};
+    if(cur.status===st){MEET._deleted=MEET._deleted||{};delete D[k];MEET._deleted[k]=1;}
+    else{const ds=g?g.depts.slice():[];D[k]={status:st,owner:cur.owner||(st==="joint"?ds[0]||"":(ds.length===1?ds[0]:"")),members:st==="joint"?(cur.members&&cur.members.length?cur.members:ds):undefined,why:cur.why||"",at:today,by:ACCESS?ACCESS.dept:""};}
     MEET_DIRTY=true;MT.cur=null;MT.log.push([k,st]);renderMeet(el);});
+  el.querySelectorAll("[data-mpk]").forEach(b=>b.onclick=()=>{const k=b.dataset.mpk,d=b.dataset.d,v=D[k];if(!v)return;
+    if(v.status==="joint"){v.members=v.members||[];const i=v.members.indexOf(d);if(i>=0)v.members.splice(i,1);else v.members.push(d);v.owner=v.members[0]||"";}
+    else v.owner=v.owner===d?"":d;
+    MEET_DIRTY=true;renderMeet(el);});
   el.querySelectorAll("[data-mundo]").forEach(b=>b.onclick=()=>{const k=b.dataset.mundo;MEET._deleted=MEET._deleted||{};delete D[k];MEET._deleted[k]=1;MEET_DIRTY=true;renderMeet(el);});
   el.querySelectorAll("[data-mown]").forEach(x=>x.onchange=()=>{D[x.dataset.mown].owner=x.value;MEET_DIRTY=true;renderMeet(el);});
   el.querySelectorAll("[data-mwhy]").forEach(x=>x.onchange=()=>{D[x.dataset.mwhy].why=x.value;MEET_DIRTY=true;});
   el.querySelectorAll("[data-mres]").forEach(x=>x.onchange=()=>{D[x.dataset.mres].result=x.value||undefined;D[x.dataset.mres].result_at=today;MEET_DIRTY=true;renderMeet(el);});
   el.querySelectorAll("[data-mcur]").forEach(r=>r.addEventListener("click",e=>{if(e.target.closest("button,a,select,input"))return;MT.cur=r.dataset.mcur;el.querySelectorAll(".mrow.cur").forEach(x=>x.classList.remove("cur"));r.classList.add("cur");}));
   el.querySelectorAll(".mt a[data-key]").forEach(a=>a.onclick=e=>{e.preventDefault();openDetail(a.dataset.key);});
-  const minutesText=()=>{const L=[`수주회의 ${today}`,``];for(const k of ["go","joint","hold","no"]){const xs=by(k);if(!xs.length)continue;L.push(`[${DECN[k]} ${xs.length}건]`);xs.forEach(x=>L.push(`- ${x.n.title} / ${x.v.owner||"-"} / ${eok(x.n.estimated_price||x.n.budget)||"-"} / 마감 ${(x.n.close_date||"").slice(0,10)}${x.v.why?` / ${x.v.why}`:""}`));L.push("");}
+  const minutesText=()=>{const L=[`수주회의 ${today}`,``];for(const k of ["go","joint","hold","no"]){const xs=by(k);if(!xs.length)continue;L.push(`[${DECN[k]} ${xs.length}건]`);xs.forEach(x=>L.push(`- ${x.n.title} / ${x.v.status==="joint"?(x.v.members||[]).join("+"):(x.v.owner||"-")} / ${eok(x.n.estimated_price||x.n.budget)||"-"} / 마감 ${(x.n.close_date||"").slice(0,10)}${x.v.why?` / ${x.v.why}`:""}`));L.push("");}
     if(pend.length){L.push(`[미결 ${pend.length}건]`);pend.forEach(g=>L.push(`- ${g.n.title} (${g.depts.join(", ")})`));}return L.join("\n");};
   const q=sel=>el.querySelector(sel);
   if(q("[data-mcopy]"))q("[data-mcopy]").onclick=()=>{navigator.clipboard.writeText(minutesText()).then(()=>toast("회의록을 복사했습니다"),()=>toast("복사 실패"));};
-  if(q("[data-mcsv]"))q("[data-mcsv]").onclick=()=>{const rows=[["결정","공고명","담당","발주기관","추정가격","마감","사유","결정일"]];Object.entries(D).forEach(([k,v])=>{const n=DATA.find(x=>x.key===k);if(!n)return;rows.push([DECN[v.status]||"",n.title,v.owner||"",instOf(n),n.estimated_price||n.budget||"",(n.close_date||"").slice(0,10),v.why||"",v.at||""]);});
+  if(q("[data-mcsv]"))q("[data-mcsv]").onclick=()=>{const rows=[["결정","공고명","담당","발주기관","추정가격","마감","사유","결정일"]];Object.entries(D).forEach(([k,v])=>{const n=DATA.find(x=>x.key===k);if(!n)return;rows.push([DECN[v.status]||"",n.title,v.status==="joint"?(v.members||[]).join("+"):(v.owner||""),instOf(n),n.estimated_price||n.budget||"",(n.close_date||"").slice(0,10),v.why||"",v.at||""]);});
     const csv="\ufeff"+rows.map(r=>r.map(c=>`"${String(c).replace(/"/g,'""')}"`).join(",")).join("\n");const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([csv],{type:"text/csv"}));a.download=`수주회의_${today}.csv`;a.click();};
   if(q("[data-msave]"))q("[data-msave]").onclick=()=>saveMeet("중간 저장").then(()=>renderMeet(el));
   if(q("[data-mclose]"))q("[data-mclose]").onclick=async()=>{const n=todayDec.length;if(n){const m=MEET.meetings.filter(m=>m.date!==today);m.push({date:today,n,go:by("go").length+by("joint").length,hold:by("hold").length,no:by("no").length,keys:todayDec.map(x=>x.k)});MEET.meetings=m;}
@@ -2485,10 +2524,13 @@ async function saveMeet(label){
   }catch(e){t.err(label+" 저장 실패: "+(e.message||e));sysNote("수주회의 저장 실패 ("+(e.message||e)+")");return false;}
 }
 /* 부서 의견 한 줄: 자기 부서 관심 공고에만 */
-function setOpinion(key,text){
-  if(!STAR[key])return;STAR[key].op=text;save(LS_STAR,STAR);
-  if(DSTATE)saveDeptState(st=>{st.star=st.star||{};if(st.star[key])st.star[key].op=text;},"수주회의 의견");
+function setOpinion(key,op){
+  if(!STAR[key])return;STAR[key].op=op;save(LS_STAR,STAR);
+  if(DSTATE)saveDeptState(st=>{st.star=st.star||{};if(st.star[key])st.star[key].op=op;},"수주회의 의견");
 }
+const opObj=o=>typeof o==="string"?{note:o}:(o&&typeof o==="object"?o:{});
+const WANTN={"상":"적극 참여","중":"검토 필요","하":"가능성 낮음"};
+function opLine(o){o=opObj(o);const p=[];if(o.want)p.push(`희망 ${o.want}(${WANTN[o.want]})`);if(o.pm)p.push(`책임기술자 ${o.pm}`);if(o.exp)p.push(`실적 ${o.exp}`);if(o.note)p.push(o.note);return p.join(" · ");}
 /* 시스템 알림: 일반 사용자에게는 띄우지 않고 기록만, 관리자에게만 표시 */
 const SYS_LOG=[];
 function sysNote(msg){SYS_LOG.push([new Date().toTimeString().slice(0,5),msg]);console.warn("[bidmon]",msg);if(ADMIN)toast(msg,6000).err(msg);}
